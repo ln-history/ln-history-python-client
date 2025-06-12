@@ -1,0 +1,25 @@
+[project]
+name = "lnhistoryclient"
+version = "0.1.0"
+description = "A reusable parser for Lightning Network gossip messages format."
+authors = [
+    { name = "Fabian Kraus", email = "fabian.felix.kraus@gmail.com" }
+]
+readme = "README.md"
+requires-python = ">=3.7, <4.0"
+license = {text = "Apache 2.0"}
+keywords = ["lightning", "network", "bitcoin", "parser", "gossip", "ln"]
+dependencies = []
+
+[project.urls]
+Homepage = "https://ln-history.info"
+Repository = "https://github.com/ln-history/ln-history-python-client"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "v$version"
+version_provider = "pep621"
