@@ -1,6 +1,6 @@
 [project]
 name = "lnhistoryclient"
-version = "0.1.0"
+version = "0.1.1"
 description = "A reusable parser for Lightning Network gossip messages format."
 authors = [
     { name = "Fabian Kraus", email = "fabian.felix.kraus@gmail.com" }
@@ -23,3 +23,4 @@ build-backend = "setuptools.build_meta"
 name = "cz_conventional_commits"
 tag_format = "v$version"
 version_provider = "pep621"
+version="0.1.1"
