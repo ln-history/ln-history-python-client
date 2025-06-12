@@ -3,30 +3,31 @@ name: 📦 Publish to PyPI
 on:
   push:
     branches:
-        - main
-    
+      - main
 
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+    environment: pypi
+
     permissions:
       id-token: write
       contents: read
 
     steps:
-    - name: 🧾 Checkout
-      uses: actions/checkout@v4
+      - name: 🧾 Checkout
+        uses: actions/checkout@v4
 
-    - name: 🐍 Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.11"
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-    - name: 📦 Install build
-      run: python -m pip install --upgrade build
+      - name: 📦 Install build
+        run: python -m pip install --upgrade build
 
-    - name: 🏗️ Build the package
-      run: python -m build
+      - name: 🏗️ Build the package
+        run: python -m build
 
-    - name: 🚀 Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
+      - name: 🚀 Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
