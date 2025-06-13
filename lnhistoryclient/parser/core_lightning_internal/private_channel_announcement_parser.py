@@ -5,10 +5,16 @@ from lnhistoryclient.model.core_lightning_internal.PrivateChannelAnnouncement im
 
 def parse(data: Union[bytes, io.BytesIO]) -> PrivateChannelAnnouncement:
     """
-    Parses a byte stream into a PrivateChannelAnnouncement object.
+    Parses a byte stream into a PrivateChannelUpdate object.
 
-    This function reads the amount in satoshis and a variable-length 
-    byte buffer representing the private channel's announcement data.
+    This function reads a 2-byte length field followed by that many bytes 
+    of channel announcement data for a private channel.
+
+    Args:
+        data (Union[bytes, io.BytesIO]): Raw binary data or stream representing a private channel update.
+
+    Returns:
+        PrivateChannelAnnouncement: Parsed private channel announcement message.
     """
     stream = data if isinstance(data, io.BytesIO) else io.BytesIO(data)
 

@@ -9,19 +9,19 @@ class DeleteChannel:
     removed from the gossip store and routing tables.
 
     Attributes:
-        short_channel_id (int): The unique 64-bit identifier of the channel to delete.
+        scid (int): The unique 64-bit identifier of the channel to delete.
     """
 
     scid: int  # u64
 
     @property
-    def short_channel_id_str(self):
+    def scid_str(self):
         """
-        Returns a human-readable representation of the short_channel_id (scid)
+        Returns a human-readable representation of the scid
         in the format 'blockxtransactionxoutput'.
 
         Returns:
-            str: Formatted string representing the SCID components.
+            str: Formatted string representing the scid components.
         """
         block = (self.scid >> 40) & 0xFFFFFF
         txindex = (self.scid >> 16) & 0xFFFFFF
@@ -30,8 +30,8 @@ class DeleteChannel:
 
     def to_dict(self) -> dict:
         return {
-            "short_channel_id": self.short_channel_id_str
+            "scid": self.scid_str
         }
 
     def __str__(self) -> str:
-        return f"DeleteChannel(scid={self.short_channel_id_str})"
+        return f"DeleteChannel(scid={self.scid_str})"

@@ -16,9 +16,9 @@ def parse(data: Union[bytes, io.BytesIO]) -> ChannelAmount:
     Returns:
         ChannelAmount: Parsed channel amount object.
     """
-    stream = data if isinstance(data, io.BytesIO) else io.BytesIO(data)
+    b = data if isinstance(data, io.BytesIO) else io.BytesIO(data)
 
-    satoshis_bytes = stream.read(8)
+    satoshis_bytes = b.read(8)
     if len(satoshis_bytes) != 8:
         raise ValueError("Expected 8 bytes for satoshis")
     satoshis = struct.unpack(">Q", satoshis_bytes)[0]
