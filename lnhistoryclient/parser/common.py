@@ -9,10 +9,41 @@ from model.Address import Address
 from model.AddressType import AddressType
 
 def to_base_32(addr: bytes) -> str:
-    """Base32 encode for .onion (lowercase, no padding)"""
+    """
+    Encodes a byte sequence using Base32 suitable for .onion addresses.
+
+    This encoding:
+    - Uses Base32 encoding without padding.
+    - Converts the result to lowercase.
+
+    Args:
+        addr (bytes): The byte sequence to encode (e.g., 10 bytes for Tor v2, 35 bytes for Tor v3).
+
+    Returns:
+        str: Base32-encoded string suitable for a .onion address.
+    """
     return base64.b32encode(addr).decode("ascii").strip("=").lower()
 
+
 def parse_address(b: io.BytesIO) -> Address | None:
+    """
+    Parses a binary-encoded address from a BytesIO stream.
+
+    Supported address types:
+    - Type 1: IPv4 (4 bytes + 2-byte port)
+    - Type 2: IPv6 (16 bytes + 2-byte port)
+    - Type 3: Tor v2 (10 bytes Base32 + 2-byte port)
+    - Type 4: Tor v3 (35 bytes Base32 + 2-byte port)
+    - Type 5: DNS hostname (1-byte length + hostname + 2-byte port)
+
+    Rolls back the stream position and returns None if parsing fails.
+
+    Args:
+        b (io.BytesIO): A stream containing the binary address.
+
+    Returns:
+        Address | None: Parsed `Address` object or `None` if unknown type or error.
+    """
     pos_before = b.tell()
     try:
         type_byte = read_exact(b, 1)
@@ -51,21 +82,52 @@ def parse_address(b: io.BytesIO) -> Address | None:
         return None
 
 
+
 def read_exact(b: io.BytesIO, n: int) -> bytes:
+    """
+    Reads exactly `n` bytes from a BytesIO stream or raises an error.
+
+    This ensures the requested number of bytes is available,
+    which is useful for deserializing structured binary data.
+
+    Args:
+        b (io.BytesIO): Input stream to read from.
+        n (int): Number of bytes to read.
+
+    Returns:
+        bytes: The read bytes.
+
+    Raises:
+        ValueError: If fewer than `n` bytes could be read.
+    """
     data = b.read(n)
     if len(data) != n:
         raise ValueError(f"Expected {n} bytes, got {len(data)}")
     return data
 
+
 def decode_alias(alias_bytes: bytes) -> str:
+    """
+    Attempts to decode a node alias from a byte sequence.
+
+    The function tries:
+    1. UTF-8 decoding (common case).
+    2. Punycode decoding if UTF-8 fails.
+    3. Falls back to hexadecimal representation as a last resort.
+
+    Null bytes are stripped from the result.
+
+    Args:
+        alias_bytes (bytes): Raw 32-byte alias from the node announcement.
+
+    Returns:
+        str: A human-readable string or hex-encoded fallback.
+    """
     try:
-        # Try UTF-8 first
         return alias_bytes.decode('utf-8').strip('\x00')
     except UnicodeDecodeError:
         try:
-            # If UTF-8 fails, try punycode (with stripped null bytes)
             cleaned = alias_bytes.strip(b'\x00')
             return codecs.decode(cleaned, 'punycode')
         except Exception:
-            # As last resort, return hex
             return alias_bytes.hex()

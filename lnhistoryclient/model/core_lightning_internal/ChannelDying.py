@@ -13,8 +13,8 @@ class ChannelDying:
         blockheight (int): Height of the block in which the spend occurred.
     """
 
-    short_channel_id: int  # u64
-    blockheight: int  # u32
+    scid: int  # u64 # TODO: RENAME every "short_channel_id" to "scid"
+    blockheight: int  # u32 # TODO: REMOVE THIS - NO NEED FOR BLOCKHEIGHT SINCE THIS IS ALREADY THE FIRST PART OF THE scid
 
     @property
     def short_channel_id_str(self):
@@ -25,9 +25,9 @@ class ChannelDying:
         Returns:
             str: Formatted string representing the SCID components.
         """
-        block = (self.short_channel_id >> 40) & 0xFFFFFF
-        txindex = (self.short_channel_id >> 16) & 0xFFFFFF
-        output = self.short_channel_id & 0xFFFF
+        block = (self.scid >> 40) & 0xFFFFFF
+        txindex = (self.scid >> 16) & 0xFFFFFF
+        output = self.scid & 0xFFFF
         return f"{block}x{txindex}x{output}"
 
     def to_dict(self) -> dict:

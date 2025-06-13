@@ -1,8 +1,9 @@
 import io
 import struct
+from typing import Union
 from lnhistoryclient.model.core_lightning_internal.DeleteChannel import DeleteChannel
 
-def parse(data: bytes) -> DeleteChannel:
+def parse(data: Union[bytes, io.BytesIO]) -> DeleteChannel:
     """
     Parses a byte stream into a DeleteChannel object.
 
@@ -15,7 +16,11 @@ def parse(data: bytes) -> DeleteChannel:
     Returns:
         DeleteChannel: Parsed delete channel object.
     """
-    
-    b = io.BytesIO(data)
-    short_channel_id = struct.unpack(">Q", b.read(8))[0]
-    return DeleteChannel(short_channel_id=short_channel_id)
+    stream = data if isinstance(data, io.BytesIO) else io.BytesIO(data)
+
+    scid_bytes = stream.read(8)
+    if len(scid_bytes) != 8:
+        raise ValueError("Expected 8 bytes for short_channel_id")
+    short_channel_id = struct.unpack(">Q", scid_bytes)[0]
+
+    return DeleteChannel(scid=short_channel_id)

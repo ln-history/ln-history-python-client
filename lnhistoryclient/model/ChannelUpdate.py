@@ -24,7 +24,7 @@ class ChannelUpdate:
 
     signature: bytes
     chain_hash: bytes
-    short_channel_id: int
+    scid: int
     timestamp: int
     message_flags: bytes
     channel_flags: bytes
@@ -36,9 +36,9 @@ class ChannelUpdate:
 
     @property
     def short_channel_id_str(self) -> str:
-        block = (self.short_channel_id >> 40) & 0xFFFFFF
-        txindex = (self.short_channel_id >> 16) & 0xFFFFFF
-        output = self.short_channel_id & 0xFFFF
+        block = (self.scid >> 40) & 0xFFFFFF
+        txindex = (self.scid >> 16) & 0xFFFFFF
+        output = self.scid & 0xFFFF
         return f"{block}x{txindex}x{output}"
 
     def __str__(self) -> str:
@@ -52,7 +52,7 @@ class ChannelUpdate:
         return {
             "signature": self.signature.hex(),
             "chain_hash": self.chain_hash.hex(),
-            "short_channel_id": self.short_channel_id_str,
+            "scid": self.short_channel_id_str,
             "timestamp": self.timestamp,
             "message_flags": self.message_flags.hex(),
             "channel_flags": self.channel_flags.hex(),

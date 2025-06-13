@@ -1,25 +1,27 @@
 import io
 import struct
+from typing import Union
 from model.ChannelUpdate import ChannelUpdate
 
-def parse(data: bytes) -> ChannelUpdate:
+def parse(data: Union[bytes, io.BytesIO]) -> ChannelUpdate:
     """
-    Parses a byte stream into a ChannelUpdate object.
+    Parses a byte stream or BytesIO into a ChannelUpdate object.
 
-    The function deserializes a binary message of type `channel_update`, 
-    extracting routing policy parameters such as fees, directionality, and limits.
+    This function deserializes a `channel_update` message from the Lightning Network gossip protocol.
+    It extracts the routing policy and metadata including fee structures, direction flags, 
+    and optional maximum HTLC value.
 
     Args:
-        data (bytes): Raw binary data representing a channel update.
+        data (Union[bytes, io.BytesIO]): Raw binary data or BytesIO representing a channel update message.
 
     Returns:
-        ChannelUpdate: Parsed and structured channel update message.
+        ChannelUpdate: Parsed update containing routing policy parameters and channel state.
     """
     
-    b = io.BytesIO(data)
+    b = io.BytesIO(data) if isinstance(data, bytes) else data
 
     signature = b.read(64)
-    chain_hash = b.read(32)[::-1]  # Convert from little-endian
+    chain_hash = b.read(32)[::-1]
     short_channel_id = struct.unpack(">Q", b.read(8))[0]
     timestamp = struct.unpack(">I", b.read(4))[0]
     message_flags = b.read(1)
@@ -29,15 +31,14 @@ def parse(data: bytes) -> ChannelUpdate:
     fee_base_msat = struct.unpack(">I", b.read(4))[0]
     fee_proportional_millionths = struct.unpack(">I", b.read(4))[0]
 
-    # Conditionally read optional field
     htlc_maximum_msat = None
-    if message_flags[0] & 1:  # Check if least significant bit is set
+    if message_flags[0] & 1:
         htlc_maximum_msat = struct.unpack(">Q", b.read(8))[0]
 
     return ChannelUpdate(
         signature=signature,
         chain_hash=chain_hash,
-        short_channel_id=short_channel_id,
+        scid=short_channel_id,
         timestamp=timestamp,
         message_flags=message_flags,
         channel_flags=channel_flags,

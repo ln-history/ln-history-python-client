@@ -11,7 +11,7 @@ class ChannelAnnouncement:
     Attributes:
         features (bytes): Feature flags applicable to the channel.
         chain_hash (bytes): Hash of the genesis block of the blockchain this channel belongs to.
-        short_channel_id (int): Unique identifier for the channel derived from funding tx.
+        scid (int): Unique identifier for the channel derived from funding tx.
         node_id_1 (bytes): Public key of the first node.
         node_id_2 (bytes): Public key of the second node.
         bitcoin_key_1 (bytes): Bitcoin key of the first node.
@@ -24,7 +24,7 @@ class ChannelAnnouncement:
     
     features: bytes
     chain_hash: bytes
-    short_channel_id: int
+    scid: int
     node_id_1: bytes
     node_id_2: bytes
     bitcoin_key_1: bytes
@@ -35,20 +35,20 @@ class ChannelAnnouncement:
     bitcoin_signature_2: bytes
 
     @property
-    def short_channel_id_str(self):
-        block = (self.short_channel_id >> 40) & 0xFFFFFF
-        txindex = (self.short_channel_id >> 16) & 0xFFFFFF
-        output = self.short_channel_id & 0xFFFF
+    def scid_str(self):
+        block = (self.scid >> 40) & 0xFFFFFF
+        txindex = (self.scid >> 16) & 0xFFFFFF
+        output = self.scid & 0xFFFF
         return f"{block}x{txindex}x{output}"
 
     def __str__(self):
-        return f"ChannelAnnouncement(scid={self.short_channel_id_str}, node_id_1={self.node_id_1.hex()}, node_id_2={self.node_id_2.hex()}, features={self.features.hex()}, chain_hash={self.chain_hash})"
+        return f"ChannelAnnouncement(scid={self.scid_str}, node_id_1={self.node_id_1.hex()}, node_id_2={self.node_id_2.hex()}, features={self.features.hex()}, chain_hash={self.chain_hash})"
     
     def to_dict(self) -> dict:
         return {
             "features": self.features.hex(),
             "chain_hash": self.chain_hash.hex(),
-            "short_channel_id": self.short_channel_id_str,
+            "scid": self.scid_str,
             "node_id_1": self.node_id_1.hex(),
             "node_id_2": self.node_id_2.hex(),
             "bitcoin_key_1": self.bitcoin_key_1.hex(),

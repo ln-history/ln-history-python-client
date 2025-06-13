@@ -12,7 +12,7 @@ class DeleteChannel:
         short_channel_id (int): The unique 64-bit identifier of the channel to delete.
     """
 
-    short_channel_id: int  # u64
+    scid: int  # u64
 
     @property
     def short_channel_id_str(self):
@@ -23,9 +23,9 @@ class DeleteChannel:
         Returns:
             str: Formatted string representing the SCID components.
         """
-        block = (self.short_channel_id >> 40) & 0xFFFFFF
-        txindex = (self.short_channel_id >> 16) & 0xFFFFFF
-        output = self.short_channel_id & 0xFFFF
+        block = (self.scid >> 40) & 0xFFFFFF
+        txindex = (self.scid >> 16) & 0xFFFFFF
+        output = self.scid & 0xFFFF
         return f"{block}x{txindex}x{output}"
 
     def to_dict(self) -> dict:

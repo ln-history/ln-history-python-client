@@ -1,22 +1,26 @@
-import struct
 import io
+import struct
+from typing import Union
 from model.NodeAnnouncement import NodeAnnouncement
 from parser.common import read_exact
 
-def parse(data: bytes) -> NodeAnnouncement:
+def parse(data: Union[bytes, io.BytesIO]) -> NodeAnnouncement:
     """
-    Parse a raw byte stream into a NodeAnnouncement object.
+    Parses a byte stream or BytesIO into a NodeAnnouncement object.
+
+    This function deserializes a `node_announcement` message from the Lightning Network gossip protocol.
+    It extracts signature, identity, visual representation, and associated address data for a network node.
 
     Args:
-        data (bytes): The raw binary data of a node announcement.
+        data (Union[bytes, io.BytesIO]): Raw binary data or BytesIO representing a node announcement message.
 
     Returns:
-        NodeAnnouncement: The parsed NodeAnnouncement instance.
+        NodeAnnouncement: Parsed node identity with visual alias and address information.
     """
-    b = io.BytesIO(data)
+    
+    b = io.BytesIO(data) if isinstance(data, bytes) else data
 
     signature = read_exact(b, 64)
-
     features_len = struct.unpack("!H", read_exact(b, 2))[0]
     features = b.read(features_len)
 

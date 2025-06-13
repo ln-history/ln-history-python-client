@@ -1,8 +1,9 @@
 import io
 import struct
-from lnhistoryclient.model.core_lightning_internal.ChannelAmount import ChannelAmount 
+from typing import Union
+from lnhistoryclient.model.core_lightning_internal.ChannelAmount import ChannelAmount
 
-def parse(data: bytes) -> ChannelAmount:
+def parse(data: Union[bytes, io.BytesIO]) -> ChannelAmount:
     """
     Parses a byte stream into a ChannelAmount object.
 
@@ -15,7 +16,11 @@ def parse(data: bytes) -> ChannelAmount:
     Returns:
         ChannelAmount: Parsed channel amount object.
     """
+    stream = data if isinstance(data, io.BytesIO) else io.BytesIO(data)
 
-    b = io.BytesIO(data)
-    satoshis = struct.unpack(">Q", b.read(8))[0]
+    satoshis_bytes = stream.read(8)
+    if len(satoshis_bytes) != 8:
+        raise ValueError("Expected 8 bytes for satoshis")
+    satoshis = struct.unpack(">Q", satoshis_bytes)[0]
+
     return ChannelAmount(satoshis=satoshis)
