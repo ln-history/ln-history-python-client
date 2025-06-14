@@ -5,8 +5,38 @@ import struct
 import base64
 import ipaddress
 
+from typing import Optional
+
 from model.Address import Address
 from model.AddressType import AddressType
+
+from ..constants import LIGHTNING_TYPES, CORE_LIGHTNING_TYPES
+
+def get_msg_type_by_raw_hex(raw_hex: bytes) -> Optional[int]:
+    """
+    Extracts the Lightning message type from the first two bytes of a raw byte sequence.
+
+    The message type is a 16-bit big-endian integer. This function checks whether the
+    extracted type exists in known message type sets (e.g., LIGHTNING_TYPES or CORE_LIGHTNING_TYPES).
+
+    Args:
+        raw_hex (bytes): A byte sequence that begins with a 2-byte message type field.
+
+    Returns:
+        Optional[int]: The decoded message type if it is recognized, otherwise None.
+
+    Raises:
+        ValueError: If the input is fewer than 2 bytes.
+    """
+    if len(raw_hex) < 2:
+        raise ValueError("Insufficient data: expected at least 2 bytes to extract message type.")
+
+    msg_type = struct.unpack(">H", raw_hex[:2])[0]
+
+    if msg_type in LIGHTNING_TYPES or msg_type in CORE_LIGHTNING_TYPES:
+        return msg_type
+
+    return None
 
 def to_base_32(addr: bytes) -> str:
     """
