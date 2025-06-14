@@ -1,6 +1,6 @@
 import io
 from dataclasses import dataclass
-from parser.common import decode_alias, parse_address
+from lnhistoryclient.parser.common import decode_alias, parse_address
 from typing import List, Any
 
 @dataclass
