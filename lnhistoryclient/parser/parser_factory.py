@@ -2,11 +2,11 @@ import io
 from typing import Callable, Dict, Union, TypeVar
 from common import read_exact
 
-from . import channel_announcement_parser
-from . import channel_update_parser
-from . import node_announcement_parser
+from lnhistoryclient.parser import channel_announcement_parser
+from lnhistoryclient.parser import channel_update_parser
+from lnhistoryclient.parser import node_announcement_parser
 
-from .core_lightning_internal import (
+from lnhistoryclient.parser.core_lightning_internal import (
     channel_amount_parser,
     private_channel_announcement_parser,
     private_channel_update_parser,

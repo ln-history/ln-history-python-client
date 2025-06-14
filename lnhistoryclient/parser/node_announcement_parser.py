@@ -1,7 +1,7 @@
 import io
 import struct
 from typing import Union
-from model.NodeAnnouncement import NodeAnnouncement
+from lnhistoryclient.model.NodeAnnouncement import NodeAnnouncement
 from parser.common import read_exact
 
 def parse(data: Union[bytes, io.BytesIO]) -> NodeAnnouncement:

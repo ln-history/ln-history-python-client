@@ -1,7 +1,7 @@
 import io
 import struct
 from typing import Union
-from model.ChannelAnnouncement import ChannelAnnouncement
+from lnhistoryclient.model.ChannelAnnouncement import ChannelAnnouncement
 
 def parse(data: Union[bytes, io.BytesIO]) -> ChannelAnnouncement:
     """

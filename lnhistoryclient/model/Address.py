@@ -1,4 +1,4 @@
-from model.AddressType import AddressType
+from lnhistoryclient.model.AddressType import AddressType
 
 class Address:
     """
