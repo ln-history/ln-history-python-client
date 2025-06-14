@@ -7,8 +7,8 @@ import ipaddress
 
 from typing import Optional
 
-from model.Address import Address
-from model.AddressType import AddressType
+from lnhistoryclient.model.Address import Address
+from lnhistoryclient.model.AddressType import AddressType
 
 from lnhistoryclient.constants import LIGHTNING_TYPES, CORE_LIGHTNING_TYPES
 

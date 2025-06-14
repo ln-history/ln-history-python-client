@@ -1,6 +1,6 @@
 import io
 from typing import Callable, Dict, Union, TypeVar
-from common import read_exact
+from lnhistoryclient.parser.common import read_exact
 
 from lnhistoryclient.parser import channel_announcement_parser
 from lnhistoryclient.parser import channel_update_parser
