@@ -1,6 +1,6 @@
 [project]
 name = "lnhistoryclient"
-version = "1.1.0"
+version = "1.1.1"
 description = "A reusable parser for Lightning Network gossip messages format."
 authors = [
     { name = "Fabian Kraus", email = "fabian.felix.kraus@gmail.com" }
