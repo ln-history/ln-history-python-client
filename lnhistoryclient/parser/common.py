@@ -11,7 +11,6 @@ from lnhistoryclient.model.Address import Address
 from lnhistoryclient.model.AddressType import AddressType
 
 from lnhistoryclient.constants import LIGHTNING_TYPES, CORE_LIGHTNING_TYPES
-from constants import LIGHTNING_TYPES, CORE_LIGHTNING_TYPES
 
 def get_msg_type_by_raw_hex(raw_hex: bytes) -> Optional[int]:
     """
