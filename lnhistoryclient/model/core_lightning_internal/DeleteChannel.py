@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from lnhistoryclient.parser.common import get_scid_from_int
+
 @dataclass
 class DeleteChannel:
     """
@@ -23,10 +25,7 @@ class DeleteChannel:
         Returns:
             str: Formatted string representing the scid components.
         """
-        block = (self.scid >> 40) & 0xFFFFFF
-        txindex = (self.scid >> 16) & 0xFFFFFF
-        output = self.scid & 0xFFFF
-        return f"{block}x{txindex}x{output}"
+        return get_scid_from_int(self.scid)
 
     def to_dict(self) -> dict:
         return {

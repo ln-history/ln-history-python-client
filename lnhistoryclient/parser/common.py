@@ -161,3 +161,23 @@ def decode_alias(alias_bytes: bytes) -> str:
             return codecs.decode(cleaned, 'punycode')
         except Exception:
             return alias_bytes.hex()
+
+def get_scid_from_int(scid_int: int) -> str:
+    """
+    Calculates the scid from integer to a human readable string:
+    scid = blockheight x transactionIndex x outputId
+
+    For more information see the specification BOLT #7:
+    https://github.com/lightning/bolts/blob/master/07-routing-gossip.md#definition-of-short_channel_id
+
+    Args:
+        scid_int: Scid in integer representation
+
+    Returns:
+        str: Formatted string representing the scid.
+    """
+
+    block = (scid_int >> 40) & 0xFFFFFF
+    txindex = (scid_int >> 16) & 0xFFFFFF
+    output = scid_int & 0xFFFF
+    return f"{block}x{txindex}x{output}"

@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from lnhistoryclient.parser.common import get_scid_from_int
+
 @dataclass
 class ChannelDying:
     """
@@ -9,7 +11,7 @@ class ChannelDying:
     has been spent and the channel is scheduled for deletion.
 
     Attributes:
-        short_channel_id (int): Unique identifier of the closing channel.
+        scid (int): Unique identifier of the closing channel.
         blockheight (int): Height of the block in which the spend occurred.
     """
 
@@ -18,20 +20,17 @@ class ChannelDying:
     @property
     def scid_str(self):
         """
-        Returns a human-readable representation of the short_channel_id (scid)
-        in the format 'blockxtransactionxoutput'.
+        Returns a human-readable representation of the scid (scid)
+        in the format 'blockheightxtransactionIndexxoutputIndex'.
 
         Returns:
             str: Formatted string representing the SCID components.
         """
-        block = (self.scid >> 40) & 0xFFFFFF
-        txindex = (self.scid >> 16) & 0xFFFFFF
-        output = self.scid & 0xFFFF
-        return f"{block}x{txindex}x{output}"
+        return get_scid_from_int(self.scid)
 
     def to_dict(self) -> dict:
         return {
-            "short_channel_id": self.scid_str,
+            "scid": self.scid_str,
         }
 
     def __str__(self) -> str:

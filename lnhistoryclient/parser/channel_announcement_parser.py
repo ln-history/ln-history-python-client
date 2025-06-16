@@ -24,13 +24,10 @@ def parse(data: Union[bytes, io.BytesIO]) -> ChannelAnnouncement:
     node_signature_2 = b.read(64)
     bitcoin_signature_1 = b.read(64)
     bitcoin_signature_2 = b.read(64)
-
     features_len = struct.unpack(">H", b.read(2))[0]
     features = b.read(features_len)
-
     chain_hash = b.read(32)[::-1]
-    short_channel_id = struct.unpack(">Q", b.read(8))[0]
-
+    scid = struct.unpack(">Q", b.read(8))[0]
     node_id_1 = b.read(33)
     node_id_2 = b.read(33)
     bitcoin_key_1 = b.read(33)
@@ -39,7 +36,7 @@ def parse(data: Union[bytes, io.BytesIO]) -> ChannelAnnouncement:
     return ChannelAnnouncement(
         features=features,
         chain_hash=chain_hash,
-        scid=short_channel_id,
+        scid=scid,
         node_id_1=node_id_1,
         node_id_2=node_id_2,
         bitcoin_key_1=bitcoin_key_1,

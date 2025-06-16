@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from lnhistoryclient.parser.common import get_scid_from_int
+
 @dataclass
 class ChannelAnnouncement:
     """
@@ -35,13 +37,10 @@ class ChannelAnnouncement:
     bitcoin_signature_2: bytes
 
     @property
-    def scid_str(self):
-        block = (self.scid >> 40) & 0xFFFFFF
-        txindex = (self.scid >> 16) & 0xFFFFFF
-        output = self.scid & 0xFFFF
-        return f"{block}x{txindex}x{output}"
+    def scid_str(self) -> str:
+        return get_scid_from_int(self.scid)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"ChannelAnnouncement(scid={self.scid_str}, node_id_1={self.node_id_1.hex()}, node_id_2={self.node_id_2.hex()}, features={self.features.hex()}, chain_hash={self.chain_hash})"
     
     def to_dict(self) -> dict:

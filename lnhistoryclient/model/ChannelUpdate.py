@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from lnhistoryclient.parser.common import get_scid_from_int
+
 @dataclass
 class ChannelUpdate:
     """
@@ -11,7 +13,7 @@ class ChannelUpdate:
     Attributes:
         signature (bytes): Signature validating the update.
         chain_hash (bytes): Hash of the blockchain genesis block.
-        short_channel_id (int): Unique identifier for the channel.
+        id (int): Unique identifier for the channel.
         timestamp (int): UNIX timestamp when the update was created.
         message_flags (bytes): Flags indicating optional message fields.
         channel_flags (bytes): Flags indicating direction and disabled status.
@@ -35,14 +37,11 @@ class ChannelUpdate:
     htlc_maximum_msat: int | None = None
 
     @property
-    def short_channel_id_str(self) -> str:
-        block = (self.scid >> 40) & 0xFFFFFF
-        txindex = (self.scid >> 16) & 0xFFFFFF
-        output = self.scid & 0xFFFF
-        return f"{block}x{txindex}x{output}"
+    def scid_str(self) -> str:
+        return get_scid_from_int(self.scid)
 
     def __str__(self) -> str:
-        return (f"ChannelUpdate(scid={self.short_channel_id_str}, timestamp={self.timestamp}, "
+        return (f"ChannelUpdate(scid={self.scid_str}, timestamp={self.timestamp}, "
                 f"flags=msg:{self.message_flags}, chan:{self.channel_flags}, "
                 f"cltv_delta={self.cltv_expiry_delta}, min_htlc={self.htlc_minimum_msat}, "
                 f"fee_base={self.fee_base_msat}, fee_ppm={self.fee_proportional_millionths}, "
@@ -52,7 +51,7 @@ class ChannelUpdate:
         return {
             "signature": self.signature.hex(),
             "chain_hash": self.chain_hash.hex(),
-            "scid": self.short_channel_id_str,
+            "scid": self.scid_str,
             "timestamp": self.timestamp,
             "message_flags": self.message_flags.hex(),
             "channel_flags": self.channel_flags.hex(),
