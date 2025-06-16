@@ -20,7 +20,7 @@ class ChannelDying:
     @property
     def scid_str(self):
         """
-        Returns a human-readable representation of the scid (scid)
+        Returns a human-readable representation of the scid
         in the format 'blockheightxtransactionIndexxoutputIndex'.
 
         Returns:

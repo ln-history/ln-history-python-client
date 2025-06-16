@@ -22,7 +22,7 @@ def parse(data: Union[bytes, io.BytesIO]) -> ChannelUpdate:
 
     signature = b.read(64)
     chain_hash = b.read(32)[::-1]
-    short_channel_id = struct.unpack(">Q", b.read(8))[0]
+    scid = struct.unpack(">Q", b.read(8))[0]
     timestamp = struct.unpack(">I", b.read(4))[0]
     message_flags = b.read(1)
     channel_flags = b.read(1)
@@ -38,7 +38,7 @@ def parse(data: Union[bytes, io.BytesIO]) -> ChannelUpdate:
     return ChannelUpdate(
         signature=signature,
         chain_hash=chain_hash,
-        scid=short_channel_id,
+        scid=scid,
         timestamp=timestamp,
         message_flags=message_flags,
         channel_flags=channel_flags,
