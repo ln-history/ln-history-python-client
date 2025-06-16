@@ -46,6 +46,20 @@ class ChannelUpdate:
             str: Formatted string representing the SCID components.
         """
         return get_scid_from_int(self.scid)
+    
+    @property
+    def direction(self) -> int:
+        """
+        Returns the direction bit (0 or 1) from the channel_flags byte.
+
+        The direction indicates which node the update is from:
+            - 0: Node1 to Node2
+            - 1: Node2 to Node1
+
+        Returns:
+            int: 0 or 1
+        """
+        return self.channel_flags[0] & 0x01
 
     def __str__(self) -> str:
         return (f"ChannelUpdate(scid={self.scid_str}, timestamp={self.timestamp}, "

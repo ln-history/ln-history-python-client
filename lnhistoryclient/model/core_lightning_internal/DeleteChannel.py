@@ -20,10 +20,10 @@ class DeleteChannel:
     def scid_str(self):
         """
         Returns a human-readable representation of the scid
-        in the format 'blockxtransactionxoutput'.
+        in the format 'blockheightxtransactionIndexxoutputIndex'.
 
         Returns:
-            str: Formatted string representing the scid components.
+            str: Formatted string representing the SCID components.
         """
         return get_scid_from_int(self.scid)
 

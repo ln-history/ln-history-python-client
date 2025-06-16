@@ -38,6 +38,13 @@ class ChannelAnnouncement:
 
     @property
     def scid_str(self) -> str:
+        """
+        Returns a human-readable representation of the scid
+        in the format 'blockheightxtransactionIndexxoutputIndex'.
+
+        Returns:
+            str: Formatted string representing the SCID components.
+        """
         return get_scid_from_int(self.scid)
 
     def __str__(self) -> str:

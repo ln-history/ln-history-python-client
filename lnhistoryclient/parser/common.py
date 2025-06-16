@@ -11,6 +11,7 @@ from lnhistoryclient.model.Address import Address
 from lnhistoryclient.model.AddressType import AddressType
 
 from lnhistoryclient.constants import LIGHTNING_TYPES, CORE_LIGHTNING_TYPES
+from constants import LIGHTNING_TYPES, CORE_LIGHTNING_TYPES
 
 def get_msg_type_by_raw_hex(raw_hex: bytes) -> Optional[int]:
     """
@@ -181,3 +182,35 @@ def get_scid_from_int(scid_int: int) -> str:
     txindex = (scid_int >> 16) & 0xFFFFFF
     output = scid_int & 0xFFFF
     return f"{block}x{txindex}x{output}"
+
+
+def strip_known_message_type(data: bytes) -> bytes:
+    """
+    Strips a known 2-byte message type prefix from the beginning of a Lightning message.
+
+    This function checks whether the input starts with any known gossip or Core Lightning 
+    message type (defined in `constants.py`). If a match is found, the 2-byte prefix is removed.
+
+    Args:
+        data (bytes): Raw binary message data, possibly including a 2-byte type prefix.
+
+    Returns:
+        bytes: The message content with the type prefix removed if recognized, 
+               otherwise the original input.
+
+    Raises:
+        ValueError: If the input is too short or not valid binary data.
+    """
+    try:
+        if len(data) < 2:
+            raise ValueError("Input data is too short to contain a message type prefix.")
+
+        known_types = LIGHTNING_TYPES | CORE_LIGHTNING_TYPES
+        prefix = int.from_bytes(data[:2], byteorder="big")
+
+        if prefix in known_types:
+            return data[2:]
+
+        return data
+    except Exception as e:
+        raise ValueError(f"Failed to strip known message type: {e}") from e
