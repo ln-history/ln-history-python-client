@@ -19,6 +19,32 @@ Repository = "https://github.com/ln-history/ln-history-python-client"
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
+[tool.black]
+line-length = 120
+target-version = ["py313"]
+skip-string-normalization = false
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+fix = true
+[tool.ruff.lint]
+select = ["E", "F", "B", "I"]  # Enable common rules: pyflakes, pycodestyle, bugbear, isort
+ignore = ["E501"]  # Example: ignore line length if Black handles it
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_unused_configs = true
+explicit_package_bases = true
+exclude = [
+    '^docs/', 
+    '^__pycache__/',
+]
+
+[tool.isort]
+profile = "black"
+
 [tool.commitizen]
 name = "cz_conventional_commits"
 tag_format = "$version"

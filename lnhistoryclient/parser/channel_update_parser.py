@@ -1,14 +1,16 @@
 import io
 import struct
 from typing import Union
+
 from lnhistoryclient.model.ChannelUpdate import ChannelUpdate
+
 
 def parse(data: Union[bytes, io.BytesIO]) -> ChannelUpdate:
     """
     Parses a byte stream or BytesIO into a ChannelUpdate object.
 
     This function deserializes a `channel_update` message from the Lightning Network gossip protocol.
-    It extracts the routing policy and metadata including fee structures, direction flags, 
+    It extracts the routing policy and metadata including fee structures, direction flags,
     and optional maximum HTLC value.
 
     Args:
@@ -17,7 +19,7 @@ def parse(data: Union[bytes, io.BytesIO]) -> ChannelUpdate:
     Returns:
         ChannelUpdate: Parsed update containing routing policy parameters and channel state.
     """
-    
+
     b = io.BytesIO(data) if isinstance(data, bytes) else data
 
     signature = b.read(64)
@@ -46,5 +48,5 @@ def parse(data: Union[bytes, io.BytesIO]) -> ChannelUpdate:
         htlc_minimum_msat=htlc_minimum_msat,
         fee_base_msat=fee_base_msat,
         fee_proportional_millionths=fee_proportional_millionths,
-        htlc_maximum_msat=htlc_maximum_msat
+        htlc_maximum_msat=htlc_maximum_msat,
     )

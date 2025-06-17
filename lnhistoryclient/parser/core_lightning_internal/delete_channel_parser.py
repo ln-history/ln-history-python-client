@@ -4,11 +4,12 @@ from typing import Union
 
 from lnhistoryclient.model.core_lightning_internal.DeleteChannel import DeleteChannel
 
+
 def parse(data: Union[bytes, io.BytesIO]) -> DeleteChannel:
     """
     Parses a byte stream into a DeleteChannel object.
 
-    This function deserializes an 8-byte scid indicating 
+    This function deserializes an 8-byte scid indicating
     the deletion of a previously announced channel.
 
     Args:

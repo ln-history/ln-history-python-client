@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
+from lnhistoryclient.model.types import ChannelAnnouncementDict
 from lnhistoryclient.parser.common import get_scid_from_int
+
 
 @dataclass
 class ChannelAnnouncement:
@@ -23,7 +25,7 @@ class ChannelAnnouncement:
         bitcoin_signature_1 (bytes): Signature of bitcoin_key_1.
         bitcoin_signature_2 (bytes): Signature of bitcoin_key_2.
     """
-    
+
     features: bytes
     chain_hash: bytes
     scid: int
@@ -48,9 +50,9 @@ class ChannelAnnouncement:
         return get_scid_from_int(self.scid)
 
     def __str__(self) -> str:
-        return f"ChannelAnnouncement(scid={self.scid_str}, node_id_1={self.node_id_1.hex()}, node_id_2={self.node_id_2.hex()}, features={self.features.hex()}, chain_hash={self.chain_hash})"
-    
-    def to_dict(self) -> dict:
+        return f"ChannelAnnouncement(scid={self.scid_str}, node_id_1={self.node_id_1.hex()}, node_id_2={self.node_id_2.hex()}, features={self.features.hex()}, chain_hash={self.chain_hash.hex()})"
+
+    def to_dict(self) -> ChannelAnnouncementDict:
         return {
             "features": self.features.hex(),
             "chain_hash": self.chain_hash.hex(),
@@ -62,5 +64,5 @@ class ChannelAnnouncement:
             "node_signature_1": self.node_signature_1.hex(),
             "node_signature_2": self.node_signature_2.hex(),
             "bitcoin_signature_1": self.bitcoin_signature_1.hex(),
-            "bitcoin_signature_2": self.bitcoin_signature_2.hex()
+            "bitcoin_signature_2": self.bitcoin_signature_2.hex(),
         }

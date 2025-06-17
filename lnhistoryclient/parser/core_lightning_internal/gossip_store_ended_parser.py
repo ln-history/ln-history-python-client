@@ -1,13 +1,15 @@
 import io
 import struct
 from typing import Union
+
 from lnhistoryclient.model.core_lightning_internal.GossipStoreEnded import GossipStoreEnded
+
 
 def parse(data: Union[bytes, io.BytesIO]) -> GossipStoreEnded:
     """
     Parses a byte stream into a GossipStoreEnded object.
 
-    This function reads the equivalent offset (8 bytes) marking the end 
+    This function reads the equivalent offset (8 bytes) marking the end
     of a gossip store file segment.
 
     Args:

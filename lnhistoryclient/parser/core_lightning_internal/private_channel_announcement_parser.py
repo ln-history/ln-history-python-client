@@ -1,13 +1,15 @@
 import io
 import struct
 from typing import Union
+
 from lnhistoryclient.model.core_lightning_internal.PrivateChannelAnnouncement import PrivateChannelAnnouncement
+
 
 def parse(data: Union[bytes, io.BytesIO]) -> PrivateChannelAnnouncement:
     """
     Parses a byte stream into a PrivateChannelUpdate object.
 
-    This function reads a 2-byte length field followed by that many bytes 
+    This function reads a 2-byte length field followed by that many bytes
     of channel announcement data for a private channel.
 
     Args:

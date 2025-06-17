@@ -1,5 +1,8 @@
 from dataclasses import dataclass
 
+from lnhistoryclient.model.core_lightning_internal.types import PrivateChannelUpdateDict
+
+
 @dataclass
 class PrivateChannelUpdate:
     """
@@ -11,12 +14,11 @@ class PrivateChannelUpdate:
     Attributes:
         update (bytes): Raw channel update message in bytes.
     """
+
     update: bytes  # u8[len], len: u16
 
-    def to_dict(self) -> dict:
-        return {
-            "update": self.update.hex()
-        }
+    def to_dict(self) -> PrivateChannelUpdateDict:
+        return {"update": self.update.hex()}
 
     def __str__(self) -> str:
         return f"PrivateChannelUpdate(update={self.update.hex()[:40]}...)"

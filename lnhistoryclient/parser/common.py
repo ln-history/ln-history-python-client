@@ -1,16 +1,14 @@
-import struct
+import base64
 import codecs
 import io
-import struct
-import base64
 import ipaddress
-
+import struct
 from typing import Optional
 
+from lnhistoryclient.constants import CORE_LIGHTNING_TYPES, LIGHTNING_TYPES
 from lnhistoryclient.model.Address import Address
 from lnhistoryclient.model.AddressType import AddressType
 
-from lnhistoryclient.constants import LIGHTNING_TYPES, CORE_LIGHTNING_TYPES
 
 def get_msg_type_by_raw_hex(raw_hex: bytes) -> Optional[int]:
     """
@@ -31,12 +29,13 @@ def get_msg_type_by_raw_hex(raw_hex: bytes) -> Optional[int]:
     if len(raw_hex) < 2:
         raise ValueError("Insufficient data: expected at least 2 bytes to extract message type.")
 
-    msg_type = struct.unpack(">H", raw_hex[:2])[0]
+    msg_type: int = int(struct.unpack(">H", raw_hex[:2])[0])
 
     if msg_type in LIGHTNING_TYPES or msg_type in CORE_LIGHTNING_TYPES:
         return msg_type
 
     return None
+
 
 def to_base_32(addr: bytes) -> str:
     """
@@ -55,7 +54,7 @@ def to_base_32(addr: bytes) -> str:
     return base64.b32encode(addr).decode("ascii").strip("=").lower()
 
 
-def parse_address(b: io.BytesIO) -> Address | None:
+def parse_address(b: io.BytesIO) -> Optional[Address]:
     """
     Parses a binary-encoded address from a BytesIO stream.
 
@@ -112,7 +111,6 @@ def parse_address(b: io.BytesIO) -> Address | None:
         return None
 
 
-
 def read_exact(b: io.BytesIO, n: int) -> bytes:
     """
     Reads exactly `n` bytes from a BytesIO stream or raises an error.
@@ -154,13 +152,14 @@ def decode_alias(alias_bytes: bytes) -> str:
         str: A human-readable string or hex-encoded fallback.
     """
     try:
-        return alias_bytes.decode('utf-8').strip('\x00')
+        return alias_bytes.decode("utf-8").strip("\x00")
     except UnicodeDecodeError:
         try:
-            cleaned = alias_bytes.strip(b'\x00')
-            return codecs.decode(cleaned, 'punycode')
+            cleaned = alias_bytes.strip(b"\x00")
+            return codecs.decode(cleaned, "punycode")
         except Exception:
             return alias_bytes.hex()
+
 
 def get_scid_from_int(scid_int: int) -> str:
     """
@@ -187,14 +186,14 @@ def strip_known_message_type(data: bytes) -> bytes:
     """
     Strips a known 2-byte message type prefix from the beginning of a Lightning message.
 
-    This function checks whether the input starts with any known gossip or Core Lightning 
+    This function checks whether the input starts with any known gossip or Core Lightning
     message type (defined in `constants.py`). If a match is found, the 2-byte prefix is removed.
 
     Args:
         data (bytes): Raw binary message data, possibly including a 2-byte type prefix.
 
     Returns:
-        bytes: The message content with the type prefix removed if recognized, 
+        bytes: The message content with the type prefix removed if recognized,
                otherwise the original input.
 
     Raises:

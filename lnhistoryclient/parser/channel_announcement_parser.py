@@ -1,14 +1,16 @@
 import io
 import struct
 from typing import Union
+
 from lnhistoryclient.model.ChannelAnnouncement import ChannelAnnouncement
+
 
 def parse(data: Union[bytes, io.BytesIO]) -> ChannelAnnouncement:
     """
     Parses a byte stream or BytesIO into a ChannelAnnouncement object.
 
     This function deserializes a `channel_announcement` message from the Lightning Network gossip protocol.
-    It extracts all required digital signatures, keys, feature bits, and metadata to reconstruct the full 
+    It extracts all required digital signatures, keys, feature bits, and metadata to reconstruct the full
     announcement used to signal a new channel.
 
     Args:
@@ -17,7 +19,7 @@ def parse(data: Union[bytes, io.BytesIO]) -> ChannelAnnouncement:
     Returns:
         ChannelAnnouncement: Parsed channel announcement with signatures, keys, and identifiers.
     """
-    
+
     b = io.BytesIO(data) if isinstance(data, bytes) else data
 
     node_signature_1 = b.read(64)
@@ -44,5 +46,5 @@ def parse(data: Union[bytes, io.BytesIO]) -> ChannelAnnouncement:
         node_signature_1=node_signature_1,
         node_signature_2=node_signature_2,
         bitcoin_signature_1=bitcoin_signature_1,
-        bitcoin_signature_2=bitcoin_signature_2
+        bitcoin_signature_2=bitcoin_signature_2,
     )

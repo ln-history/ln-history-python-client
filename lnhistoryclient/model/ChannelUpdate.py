@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
+from lnhistoryclient.model.types import ChannelUpdateDict
 from lnhistoryclient.parser.common import get_scid_from_int
+
 
 @dataclass
 class ChannelUpdate:
@@ -46,7 +48,7 @@ class ChannelUpdate:
             str: Formatted string representing the SCID components.
         """
         return get_scid_from_int(self.scid)
-    
+
     @property
     def direction(self) -> int:
         """
@@ -62,13 +64,15 @@ class ChannelUpdate:
         return self.channel_flags[0] & 0x01
 
     def __str__(self) -> str:
-        return (f"ChannelUpdate(scid={self.scid_str}, timestamp={self.timestamp}, "
-                f"flags=msg:{self.message_flags}, chan:{self.channel_flags}, "
-                f"cltv_delta={self.cltv_expiry_delta}, min_htlc={self.htlc_minimum_msat}, "
-                f"fee_base={self.fee_base_msat}, fee_ppm={self.fee_proportional_millionths}, "
-                f"max_htlc={self.htlc_maximum_msat})")
+        return (
+            f"ChannelUpdate(scid={self.scid_str}, timestamp={self.timestamp}, "
+            f"flags=msg:{self.message_flags.hex()}, chan:{self.channel_flags.hex()}, "
+            f"cltv_delta={self.cltv_expiry_delta}, min_htlc={self.htlc_minimum_msat}, "
+            f"fee_base={self.fee_base_msat}, fee_ppm={self.fee_proportional_millionths}, "
+            f"max_htlc={self.htlc_maximum_msat})"
+        )
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> ChannelUpdateDict:
         return {
             "signature": self.signature.hex(),
             "chain_hash": self.chain_hash.hex(),
@@ -80,5 +84,5 @@ class ChannelUpdate:
             "htlc_minimum_msat": self.htlc_minimum_msat,
             "fee_base_msat": self.fee_base_msat,
             "fee_proportional_millionths": self.fee_proportional_millionths,
-            "htlc_maximum_msat": self.htlc_maximum_msat
+            "htlc_maximum_msat": self.htlc_maximum_msat,
         }

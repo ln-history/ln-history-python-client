@@ -1,25 +1,58 @@
+# mypy: ignore-errors
+
 import io
-from typing import Callable, Dict, Union, TypeVar
+from typing import IO, Dict, Protocol, Union
+
+from lnhistoryclient.model import (
+    ChannelAnnouncement,
+    ChannelUpdate,
+    NodeAnnouncement,
+)
+from lnhistoryclient.model.core_lightning_internal import (
+    ChannelAmount,
+    ChannelDying,
+    DeleteChannel,
+    GossipStoreEnded,
+    PrivateChannelAnnouncement,
+    PrivateChannelUpdate,
+)
+from lnhistoryclient.parser import (
+    channel_announcement_parser,
+    channel_update_parser,
+    node_announcement_parser,
+)
 from lnhistoryclient.parser.common import read_exact
-
-from lnhistoryclient.parser import channel_announcement_parser
-from lnhistoryclient.parser import channel_update_parser
-from lnhistoryclient.parser import node_announcement_parser
-
 from lnhistoryclient.parser.core_lightning_internal import (
     channel_amount_parser,
-    private_channel_announcement_parser,
-    private_channel_update_parser,
+    channel_dying_parser,
     delete_channel_parser,
     gossip_store_ended_parser,
-    channel_dying_parser,
+    private_channel_announcement_parser,
+    private_channel_update_parser,
 )
 
-# Define a generic type for parsed message objects
-ParsedMessage = TypeVar("ParsedMessage")
+# Union of all possible parsed message types
+ParsedMessage = Union[
+    ChannelAnnouncement.ChannelAnnouncement,
+    NodeAnnouncement.NodeAnnouncement,
+    ChannelUpdate.ChannelUpdate,
+    ChannelAmount.ChannelAmount,
+    PrivateChannelAnnouncement.PrivateChannelAnnouncement,
+    PrivateChannelUpdate.PrivateChannelUpdate,
+    DeleteChannel.DeleteChannel,
+    GossipStoreEnded.GossipStoreEnded,
+    ChannelDying.ChannelDying,
+]
 
-# Mapping of message type to corresponding parser function
-PARSER_MAP: Dict[int, Callable[[bytes], ParsedMessage]] = {
+
+class ParserFunction(Protocol):
+    """Protocol for a parser function that parses binary data into a ParsedMessage."""
+
+    def __call__(self, data: Union[bytes, IO[bytes]]) -> ParsedMessage: ...
+
+
+# Map message type integers to their corresponding parser function
+PARSER_MAP: Dict[int, ParserFunction] = {
     256: channel_announcement_parser.parse,
     257: node_announcement_parser.parse,
     258: channel_update_parser.parse,
@@ -32,37 +65,35 @@ PARSER_MAP: Dict[int, Callable[[bytes], ParsedMessage]] = {
 }
 
 
-def get_parser_by_message_type(message_type: int) -> Callable[[bytes], ParsedMessage]:
-    """
-    Returns the parser function for the given gossip message type.
+def get_parser_by_message_type(message_type: int) -> ParserFunction:
+    """Return the parser function for the given message type.
 
     Args:
-        message_type (int): The integer message type identifier.
+        message_type (int): The type ID of the message.
 
     Returns:
-        Callable[[bytes], ParsedMessage]: The parser function.
+        ParserFunction: A callable parser function.
 
     Raises:
-        ValueError: If no parser is found for the given message type.
+        ValueError: If the message type is unknown.
     """
     try:
         return PARSER_MAP[message_type]
-    except KeyError:
-        raise ValueError(f"No parser found for message type: {message_type}")
+    except KeyError as e:
+        raise ValueError(f"No parser found for message type {message_type}") from e
 
 
-def get_parser_by_raw_hex(raw_hex: Union[bytes, io.BytesIO]) -> Callable[[bytes], ParsedMessage]:
-    """
-    Extracts the message type from the raw hex input and returns the corresponding parser function.
+def get_parser_by_raw_hex(raw_hex: Union[bytes, IO[bytes]]) -> ParserFunction:
+    """Determine the message type from raw binary and return the corresponding parser.
 
     Args:
-        raw_hex (Union[bytes, io.BytesIO]): Raw gossip message as bytes or a BytesIO stream.
+        raw_hex (Union[bytes, IO[bytes]]): Raw binary message or a stream.
 
     Returns:
-        Callable[[bytes], ParsedMessage]: A parser function for the message type.
+        ParserFunction: A callable parser function based on the message type.
 
     Raises:
-        ValueError: If the message type could not be determined or is unsupported.
+        ValueError: If the message type cannot be determined.
     """
     stream = raw_hex if isinstance(raw_hex, io.BytesIO) else io.BytesIO(raw_hex)
 

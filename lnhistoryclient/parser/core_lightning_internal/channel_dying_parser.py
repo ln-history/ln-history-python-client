@@ -1,14 +1,16 @@
 import io
 import struct
 from typing import Union
+
 from lnhistoryclient.model.core_lightning_internal.ChannelDying import ChannelDying
+
 
 def parse(data: Union[bytes, io.BytesIO]) -> ChannelDying:
     """
     Parses a byte stream into a ChannelDying object.
 
-    This function deserializes a message that indicates a channel is 
-    about to be closed. It extracts the scid and the 
+    This function deserializes a message that indicates a channel is
+    about to be closed. It extracts the scid and the
     blockheight at which the channel is expected to die.
 
     Args:

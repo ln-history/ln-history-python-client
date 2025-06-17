@@ -1,8 +1,10 @@
 import io
 import struct
 from typing import Union
+
 from lnhistoryclient.model.NodeAnnouncement import NodeAnnouncement
 from lnhistoryclient.parser.common import read_exact
+
 
 def parse(data: Union[bytes, io.BytesIO]) -> NodeAnnouncement:
     """
@@ -17,7 +19,7 @@ def parse(data: Union[bytes, io.BytesIO]) -> NodeAnnouncement:
     Returns:
         NodeAnnouncement: Parsed node identity with visual alias and address information.
     """
-    
+
     b = io.BytesIO(data) if isinstance(data, bytes) else data
 
     signature = read_exact(b, 64)
@@ -39,5 +41,5 @@ def parse(data: Union[bytes, io.BytesIO]) -> NodeAnnouncement:
         node_id=node_id,
         rgb_color=rgb_color,
         alias=alias,
-        addresses=address_bytes_data
+        addresses=address_bytes_data,
     )

@@ -1,35 +1,59 @@
+from dataclasses import dataclass, field
+from typing import Optional
+
+from lnhistoryclient.model.types import AddressTypeDict
+
+
+@dataclass
 class AddressType:
     """
     Represents the type of a network address used in the Lightning Network.
 
-    This class maps numeric identifiers to human-readable address type names,
-    such as IPv4, IPv6, or Tor. It provides a string representation and 
-    dictionary export for easy display and serialization.
-
     Attributes:
-        id (int | None): The numeric identifier for the address type.
+        id (Optional[int]): The numeric identifier for the address type.
         name (str): The human-readable name corresponding to the ID.
     """
-    
-    def __init__(self, id=None):
-        self.id = id
-        self.name = self.resolve_name(id)
 
-    def resolve_name(self, id):
-        mapping = {
-            1: "IPv4",
-            2: "IPv6",
-            3: "Torv2",
-            4: "Torv3",
-            5: "DNS"
-        }
-        return mapping.get(id, "Unknown")
+    id: Optional[int] = None
+    name: str = field(init=False)
 
-    def __repr__(self):
+    def __post_init__(self) -> None:
+        """Initializes the `name` attribute based on the given `id`."""
+        self.name = self.resolve_name(self.id)
+
+    @staticmethod
+    def resolve_name(id: Optional[int]) -> str:
+        """
+        Resolves the human-readable name for a given address type ID.
+
+        Args:
+            id (Optional[int]): The numeric identifier of the address type.
+
+        Returns:
+            str: The corresponding name or 'Unknown'.
+        """
+        mapping = {1: "IPv4", 2: "IPv6", 3: "Torv2", 4: "Torv3", 5: "DNS"}
+        return mapping.get(id or 0, "Unknown")
+
+    def __str__(self) -> str:
+        """
+        Returns a string representation of the AddressType.
+
+        Returns:
+            str: Human-readable string of the address type.
+        """
         return f"<AddressType id={self.id} name='{self.name}'>"
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "name": self.name
-        }
+    def to_dict(self) -> AddressTypeDict:
+        """
+        Converts the AddressType instance into a dictionary.
+
+        Returns:
+            AddressTypeDict: A dictionary with `id` and `name`.
+
+        Raises:
+            ValueError: If `id` is None (not allowed by AddressTypeDict).
+        """
+        if self.id is None:
+            raise ValueError("id must not be None to convert to AddressTypeDict")
+        return {"id": self.id, "name": self.name}

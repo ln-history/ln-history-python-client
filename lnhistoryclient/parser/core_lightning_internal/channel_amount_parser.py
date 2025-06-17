@@ -1,7 +1,9 @@
 import io
 import struct
 from typing import Union
+
 from lnhistoryclient.model.core_lightning_internal.ChannelAmount import ChannelAmount
+
 
 def parse(data: Union[bytes, io.BytesIO]) -> ChannelAmount:
     """

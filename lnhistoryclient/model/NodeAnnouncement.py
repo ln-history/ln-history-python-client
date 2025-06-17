@@ -1,7 +1,11 @@
 import io
 from dataclasses import dataclass
+from typing import List
+
+from lnhistoryclient.model.Address import Address
+from lnhistoryclient.model.types import NodeAnnouncementDict
 from lnhistoryclient.parser.common import decode_alias, parse_address
-from typing import List, Any
+
 
 @dataclass
 class NodeAnnouncement:
@@ -17,7 +21,7 @@ class NodeAnnouncement:
     alias: bytes
     addresses: bytes  # raw address byte stream
 
-    def _parse_addresses(self) -> List[Any]:
+    def _parse_addresses(self) -> List[Address]:
         """
         Parse the raw address byte stream into Address objects.
 
@@ -34,7 +38,7 @@ class NodeAnnouncement:
                 parsed_addresses.append(addr)
             else:
                 break
-        
+
         return parsed_addresses
 
     def __str__(self) -> str:
@@ -51,7 +55,7 @@ class NodeAnnouncement:
             f"addresses={self._parse_addresses()})"
         )
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> NodeAnnouncementDict:
         """
         Convert the NodeAnnouncement to a dictionary for serialization.
 
@@ -65,5 +69,5 @@ class NodeAnnouncement:
             "node_id": self.node_id.hex(),
             "rgb_color": self.rgb_color.hex(),
             "alias": decode_alias(self.alias),
-            "addresses": [addr.to_dict() for addr in self._parse_addresses()]
+            "addresses": [addr.to_dict() for addr in self._parse_addresses()],
         }

@@ -1,13 +1,15 @@
 from dataclasses import dataclass
 
+from lnhistoryclient.model.core_lightning_internal.types import ChannelDyingDict
 from lnhistoryclient.parser.common import get_scid_from_int
+
 
 @dataclass
 class ChannelDying:
     """
     Type 4106: Indicates that a Lightning Network channel is closing or was force-closed.
 
-    This custom message signals that the funding transaction 
+    This custom message signals that the funding transaction
     has been spent and the channel is scheduled for deletion.
 
     Attributes:
@@ -16,9 +18,10 @@ class ChannelDying:
     """
 
     scid: int  # u64
+    blockheight: int
 
     @property
-    def scid_str(self):
+    def scid_str(self) -> str:
         """
         Returns a human-readable representation of the scid
         in the format 'blockheightxtransactionIndexxoutputIndex'.
@@ -28,10 +31,8 @@ class ChannelDying:
         """
         return get_scid_from_int(self.scid)
 
-    def to_dict(self) -> dict:
-        return {
-            "scid": self.scid_str,
-        }
+    def to_dict(self) -> ChannelDyingDict:
+        return {"scid": self.scid_str, "blockheight": self.blockheight}
 
     def __str__(self) -> str:
-        return f"ChannelDying(scid={self.scid_str}, blockheight={self.blockheight})"
+        return f"ChannelDying(scid={self.scid_str})"
