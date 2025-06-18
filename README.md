@@ -42,7 +42,7 @@ from lnhistoryclient.parser.parser_factory import get_parser_by_message_type
 
 raw_hex = bytes.fromhex("0101...")  # Replace with actual raw hex (includes 2-byte type prefix)
 
-msg_type = get_message_type(raw_hex)
+msg_type = get_message_type_by_raw_hex(raw_hex)
 if msg_type is not None:
     parser = get_parser_by_message_type(msg_type)
     result = parser(raw_hex[2:])  # Strip the type prefix if your parser expects it
