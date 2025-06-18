@@ -29,13 +29,41 @@ pip install lnhistoryclient
 ```
 
 ## 🧬 Usage
+
+To parse a raw Lightning Network gossip message, first extract the message type,
+then use the type to select the appropriate parser. This ensures correctness
+and avoids interpreting invalid data.
+The library accepts both bytes and io.BytesIO objects as input for maximum flexibility.
+
 ```python
-from lnhistoryclient.parser import parser_factory
+from lnhistoryclient.parser.common import get_message_type
+from lnhistoryclient.parser.parser_factory import get_parser_by_message_type
 
-raw_hex = "0101..."  # Replace with actual raw gossip hex string (including the 2-Byte type field)
-parsed = parser_factory.get_parser_by_raw_hex(raw_hex)
 
-print(parsed)
+raw_hex = bytes.fromhex("0101...")  # Replace with actual raw hex (includes 2-byte type prefix)
+
+msg_type = get_message_type(raw_hex)
+if msg_type is not None:
+    parser = get_parser_by_message_type(msg_type)
+    result = parser(raw_hex[2:])  # Strip the type prefix if your parser expects it
+    print(result)
+else:
+    print("Unknown or unsupported message type.")
+```
+
+For convenience (and if you're confident the input is valid), a shortcut is also available:
+
+```python
+from lnhistoryclient.parser.parser_factory import get_parser_from_raw_hex
+
+raw_hex = bytes.fromhex("0101...")  # Replace with actual raw hex
+
+parser = get_parser_from_raw_hex(raw_hex)
+if parser:
+    result = parser(raw_hex[2:])
+    print(result)
+else:
+    print("Could not determine parser.")
 ```
 
 You can also directly use individual parsers if you know the message type:

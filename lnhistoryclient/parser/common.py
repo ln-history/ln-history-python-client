@@ -10,30 +10,27 @@ from lnhistoryclient.model.Address import Address
 from lnhistoryclient.model.AddressType import AddressType
 
 
-def get_msg_type_by_raw_hex(raw_hex: bytes) -> Optional[int]:
+def get_message_type_by_raw_hex(raw_hex: bytes) -> Optional[int]:
     """
-    Extracts the Lightning message type from the first two bytes of a raw byte sequence.
+    Extract the Lightning message type from the first two bytes.
 
-    The message type is a 16-bit big-endian integer. This function checks whether the
-    extracted type exists in known message type sets (e.g., LIGHTNING_TYPES or CORE_LIGHTNING_TYPES).
+    This checks whether the type is in the known message type sets.
 
     Args:
-        raw_hex (bytes): A byte sequence that begins with a 2-byte message type field.
+        raw_hex (bytes): Byte sequence that must be at least 2 bytes long.
 
     Returns:
-        Optional[int]: The decoded message type if it is recognized, otherwise None.
+        Optional[int]: The message type if recognized, otherwise None.
 
     Raises:
-        ValueError: If the input is fewer than 2 bytes.
+        ValueError: If raw_hex is less than 2 bytes.
     """
     if len(raw_hex) < 2:
-        raise ValueError("Insufficient data: expected at least 2 bytes to extract message type.")
+        raise ValueError("Insufficient data: Expected at least 2 bytes to extract message type.")
 
-    msg_type: int = int(struct.unpack(">H", raw_hex[:2])[0])
-
+    msg_type: int = struct.unpack(">H", raw_hex[:2])[0]
     if msg_type in LIGHTNING_TYPES or msg_type in CORE_LIGHTNING_TYPES:
         return msg_type
-
     return None
 
 
