@@ -1,12 +1,21 @@
-# ⚡ ln-history-python-client
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Checked with mypy](https://img.shields.io/badge/type%20checked-mypy-blue)](http://mypy-lang.org/)
+![Uses: dataclasses](https://img.shields.io/badge/uses-dataclasses-brightgreen)
+![Uses: typing](https://img.shields.io/badge/uses-typing-blue)
+
+
+# ⚡ lnhistoryclient
 
 A Python client library to **parse and handle raw Lightning Network gossip messages** from the gossip store. Centralized, reusable, and production-tested on real-world data. Perfect for microservices that consume Lightning Network data in `raw_hex` format.
+For details about the gossip messages see the Lightning Network specifications [BOLT #7](https://github.com/lightning/bolts/blob/master/07-routing-gossip.md)
+This python package is part of the [ln-history project](https://github.com/ln-history)
 
 ---
 
 ## 📦 Features
 
-- 🔍 Parses raw gossip messages: Channel Announcements, Channel Updates, Node Announcements, and more
+- 🔍 Parses raw gossip messages: `ChannelAnnouncement`, `NodeAnnouncement`, `ChannelUpdate`, and more
 - 🧱 Clean and extensible object model (e.g., `ChannelAnnouncement`, `NodeAnnouncement`, `ChannelUpdate`)
 - 🧪 Tested on real-world data
 - 🧰 Built with reusability in mind for microservice architectures
@@ -16,15 +25,15 @@ A Python client library to **parse and handle raw Lightning Network gossip messa
 ## 🛠️ Installation
 
 ```bash
-pip install 
+pip install lnhistoryclient
 ```
 
 ## 🧬 Usage
 ```python
 from lnhistoryclient.parser import parser_factory
 
-raw_hex = "0101..."  # Replace with actual raw gossip hex string
-parsed = parser_factory.parse(raw_hex)
+raw_hex = "0101..."  # Replace with actual raw gossip hex string (including the 2-Byte type field)
+parsed = parser_factory.get_parser_by_raw_hex(raw_hex)
 
 print(parsed)
 ```
@@ -38,38 +47,71 @@ result = parse_channel_announcement(raw_hex)
 print(result.channel_id, result.node1_id, result.node2_id)
 ```
 
+## 🎨 Model
+The library provides [python typing models](https://docs.python.org/3/library/typing.html) for every gossip message.
+See in the project structure section below for details.
+
 ## 📁 Project Structure
 ```bash
 lnhistoryclient
-├── model
-│   ├── __init__.py
-│   ├── Address.py
-│   ├── AddressType.py
-│   ├── ChannelAnnouncement.py
-│   ├── ChannelUpdate.py
-│   ├── core-lightning-internal
+├── LICENSE
+├── lnhistoryclient
+│   ├── constants.py
+│   ├── model
 │   │   ├── __init__.py
-│   │   ├── ChannelAmount.py
-│   │   ├── ChannelDying.py
-│   │   ├── DeleteChannel.py
-│   │   ├── GossipStoreEnded.py
-│   │   ├── PrivateChannelAnnouncement.py
-│   │   └── PrivateChannelUpdate.py
-│   └── NodeAnnouncement.py
-└── parser
-    ├── __init__.py
-    ├── channel_announcement_parser.py
-    ├── channel_update_parser.py
-    ├── common.py
-    ├── core-lightning-internal
-    │   ├── channel_amount_parser.py
-    │   ├── channel_dying_parser.py
-    │   ├── delete_channel_parser.py
-    │   ├── gossip_store_ended_parser.py
-    │   ├── private_channel_announcement_parser.py
-    │   └── private_channel_update_parser.py
-    ├── node_announcement_parser.py
-    └── parser_factory.py
+│   │   ├── Address.py
+│   │   ├── AddressType.py
+│   │   ├── cache
+│   │   │   └── GossipCache.py
+│   │   ├── ChannelAnnouncement.py
+│   │   ├── ChannelUpdate.py
+│   │   ├── core_lightning_internal
+│   │   │   ├── __init__.py
+│   │   │   ├── ChannelAmount.py
+│   │   │   ├── ChannelDying.py
+│   │   │   ├── DeleteChannel.py
+│   │   │   ├── GossipStoreEnded.py
+│   │   │   ├── PrivateChannelAnnouncement.py
+│   │   │   ├── PrivateChannelUpdate.py
+│   │   │   └── types.py
+│   │   ├── gossip_event_kafka
+│   │   │   ├── __init__.py
+│   │   │   └── GossipEvent.py
+│   │   ├── gossip_event_zmq
+│   │   │   ├── __init__.py
+│   │   │   ├── ChannelAnnouncementEvent.py
+│   │   │   ├── ChannelUpdateEvent.py
+│   │   │   ├── core_lightning_internal
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── ChannelAmountEvent.py
+│   │   │   │   ├── ChannelDyingEvent.py
+│   │   │   │   ├── DeleteChannelEvent.py
+│   │   │   │   ├── GossipStoreEndedEvent.py
+│   │   │   │   ├── PrivateChannelAnnouncementEvent.py
+│   │   │   │   └── PrivateChannelUpdateEvent.py
+│   │   │   └── NodeAnnouncementEvent.py
+│   │   ├── MessageMetadata.py
+│   │   ├── NodeAnnouncement.py
+│   │   └── types.py
+│   └── parser
+│       ├── __init__.py
+│       ├── channel_announcement_parser.py
+│       ├── channel_update_parser.py
+│       ├── common.py
+│       ├── core_lightning_internal
+│       │   ├── __init__.py
+│       │   ├── channel_amount_parser.py
+│       │   ├── channel_dying_parser.py
+│       │   ├── delete_channel_parser.py
+│       │   ├── gossip_store_ended_parser.py
+│       │   ├── private_channel_announcement_parser.py
+│       │   └── private_channel_update_parser.py
+│       ├── node_announcement_parser.py
+│       └── parser_factory.py
+├── pyproject.toml
+├── README.md
+├── requirements-dev.txt
+└── tests
 ```
 
 ## 🧪 Testing
@@ -78,6 +120,9 @@ Unit tests coming soon.
 ## 🧠 Requirements
 Python >=3.7, <4.0
 Pure Python, no external dependencies
+
+## Code Style, Linting etc.
+The code has been formatted using [ruff](https://github.com/astral-sh/ruff), [black]() and [mypy]()
 
 ## 🤝 Contributing
 Pull requests, issues, and feature ideas are always welcome!
