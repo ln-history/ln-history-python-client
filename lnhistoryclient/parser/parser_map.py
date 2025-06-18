@@ -1,8 +1,7 @@
 # type: ignore
 
-from typing import Dict
+from typing import Callable, Dict
 
-from lnhistoryclient.model.types import ParserFunction
 from lnhistoryclient.parser import (
     channel_announcement_parser,
     channel_update_parser,
@@ -18,7 +17,7 @@ from lnhistoryclient.parser.core_lightning_internal import (
 )
 
 # Map message type integers to their corresponding parser function
-PARSER_MAP: Dict[int, ParserFunction] = {
+PARSER_MAP: Dict[int, Callable] = {
     256: channel_announcement_parser.parse,
     257: node_announcement_parser.parse,
     258: channel_update_parser.parse,

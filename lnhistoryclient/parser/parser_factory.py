@@ -1,14 +1,13 @@
 # mypy: ignore-errors
 
 import io
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
-from lnhistoryclient.model.types import ParserFunction
 from lnhistoryclient.parser.common import get_message_type_by_raw_hex
 from lnhistoryclient.parser.parser_map import PARSER_MAP
 
 
-def get_parser_by_message_type(message_type: int) -> ParserFunction:
+def get_parser_by_message_type(message_type: int) -> Callable:
     """
     Return the parser for a given Lightning message type.
 
@@ -16,7 +15,7 @@ def get_parser_by_message_type(message_type: int) -> ParserFunction:
         message_type (int): Type ID.
 
     Returns:
-        ParserFunction: The parser function.
+        Callable: The parser function.
 
     Raises:
         ValueError: If the message type is unknown.
@@ -27,7 +26,7 @@ def get_parser_by_message_type(message_type: int) -> ParserFunction:
         raise ValueError(f"No parser found for message type {message_type}") from e
 
 
-def get_parser_from_raw_hex(raw_hex: Union[bytes, io.BytesIO]) -> Optional[ParserFunction]:
+def get_parser_from_raw_hex(raw_hex: Union[bytes, io.BytesIO]) -> Optional[Callable]:
     """
     Convenience method to get parser directly from raw message bytes.
 
@@ -38,7 +37,7 @@ def get_parser_from_raw_hex(raw_hex: Union[bytes, io.BytesIO]) -> Optional[Parse
         raw_hex (Union[bytes, IO[bytes]]): Message data including the 2-byte type prefix.
 
     Returns:
-        Optional[ParserFunction]: The corresponding parser if known, otherwise None.
+        Optional[Callable]: The corresponding parser if known, otherwise None.
     """
     if isinstance(raw_hex, io.BytesIO):
         peek = raw_hex.read(2)

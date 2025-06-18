@@ -1,18 +1,4 @@
-from typing import IO, List, Optional, Protocol, TypedDict, Union
-
-from lnhistoryclient.model import (
-    ChannelAnnouncement,
-    ChannelUpdate,
-    NodeAnnouncement,
-)
-from lnhistoryclient.model.core_lightning_internal import (
-    ChannelAmount,
-    ChannelDying,
-    DeleteChannel,
-    GossipStoreEnded,
-    PrivateChannelAnnouncement,
-    PrivateChannelUpdate,
-)
+from typing import List, Optional, TypedDict
 
 
 class AddressTypeDict(TypedDict):
@@ -69,23 +55,3 @@ class MessageMetadata(TypedDict):
     timestamp: int
     sender_node_id: str
     length: str  # Length in bytes without starting 2-byte type
-
-
-# Union of all possible parsed message types
-ParsedMessage = Union[
-    ChannelAnnouncement.ChannelAnnouncement,
-    NodeAnnouncement.NodeAnnouncement,
-    ChannelUpdate.ChannelUpdate,
-    ChannelAmount.ChannelAmount,
-    PrivateChannelAnnouncement.PrivateChannelAnnouncement,
-    PrivateChannelUpdate.PrivateChannelUpdate,
-    DeleteChannel.DeleteChannel,
-    GossipStoreEnded.GossipStoreEnded,
-    ChannelDying.ChannelDying,
-]
-
-
-class ParserFunction(Protocol):
-    """Protocol for a parser function that parses binary data into a ParsedMessage."""
-
-    def __call__(self, data: Union[bytes, IO[bytes]]) -> ParsedMessage: ...
