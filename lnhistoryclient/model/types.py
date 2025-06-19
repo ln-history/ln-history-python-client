@@ -1,4 +1,4 @@
-from typing import List, Optional, TypedDict
+from typing import List, Optional, TypedDict, Union
 
 
 class AddressTypeDict(TypedDict):
@@ -55,3 +55,16 @@ class MessageMetadata(TypedDict):
     timestamp: int
     sender_node_id: str
     length: str  # Length in bytes without starting 2-byte type
+
+
+ParsedGossipDict = Union[
+    ChannelAnnouncementDict,
+    NodeAnnouncementDict,
+    ChannelUpdateDict,
+]
+
+
+class GossipPayload(TypedDict):
+    metadata: MessageMetadata
+    raw_hex: str
+    parsed: ParsedGossipDict

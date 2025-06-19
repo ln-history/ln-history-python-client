@@ -1,4 +1,6 @@
-from typing import TypedDict
+from typing import TypedDict, Union
+
+from lnhistoryclient.model.types import MessageMetadata
 
 
 class ChannelAmountDict(TypedDict):
@@ -25,3 +27,19 @@ class PrivateChannelAnnouncementDict(TypedDict):
 
 class PrivateChannelUpdateDict(TypedDict):
     update: str
+
+
+ParsedCoreLightningGossipDict = Union[
+    ChannelAmountDict,
+    ChannelDyingDict,
+    DeleteChannelDict,
+    GossipStoreEndedDict,
+    PrivateChannelAnnouncementDict,
+    PrivateChannelUpdateDict,
+]
+
+
+class CoreLightningGossipPayload(TypedDict):
+    metadata: MessageMetadata
+    raw_hex: str
+    parsed: ParsedCoreLightningGossipDict
