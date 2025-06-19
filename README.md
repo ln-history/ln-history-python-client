@@ -4,6 +4,7 @@
 ![Uses: dataclasses](https://img.shields.io/badge/uses-dataclasses-brightgreen)
 ![Uses: typing](https://img.shields.io/badge/uses-typing-blue)
 
+[![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
 
 # ⚡ lnhistoryclient
 
