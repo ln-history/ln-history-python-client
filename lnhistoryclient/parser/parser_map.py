@@ -22,31 +22,31 @@ from lnhistoryclient.model.core_lightning_internal.GossipStoreEnded import Gossi
 from lnhistoryclient.model.core_lightning_internal.PrivateChannelAnnouncement import PrivateChannelAnnouncementDict
 from lnhistoryclient.model.core_lightning_internal.PrivateChannelUpdate import PrivateChannelUpdateDict
 from lnhistoryclient.model.NodeAnnouncement import NodeAnnouncementDict
-from lnhistoryclient.parser import (
-    channel_announcement_parser,
-    channel_update_parser,
-    node_announcement_parser,
+from lnhistoryclient.parser.core_lightning_internal.parser import (
+    parse_channel_amount,
+    parse_channel_dying,
+    parse_delete_channel,
+    parse_gossip_store_ended,
+    parse_private_channel_announcement,
+    parse_private_channel_update,
 )
-from lnhistoryclient.parser.core_lightning_internal import (
-    channel_amount_parser,
-    channel_dying_parser,
-    delete_channel_parser,
-    gossip_store_ended_parser,
-    private_channel_announcement_parser,
-    private_channel_update_parser,
+from lnhistoryclient.parser.parser import (
+    parse_channel_announcement,
+    parse_channel_update,
+    parse_node_announcement,
 )
 
 # Map message type integers to their corresponding parser function
 PARSER_MAP: Dict[int, Callable] = {
-    256: channel_announcement_parser.parse,
-    257: node_announcement_parser.parse,
-    258: channel_update_parser.parse,
-    4101: channel_amount_parser.parse,
-    4102: private_channel_announcement_parser.parse,
-    4103: private_channel_update_parser.parse,
-    4104: delete_channel_parser.parse,
-    4105: gossip_store_ended_parser.parse,
-    4106: channel_dying_parser.parse,
+    256: parse_channel_announcement,
+    257: parse_node_announcement,
+    258: parse_channel_update,
+    4101: parse_channel_amount,
+    4102: parse_private_channel_announcement,
+    4103: parse_private_channel_update,
+    4104: parse_delete_channel,
+    4105: parse_gossip_store_ended,
+    4106: parse_channel_dying,
 }
 
 # Map gossip message types to their expected parsed dict type
