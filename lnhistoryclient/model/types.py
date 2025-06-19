@@ -50,11 +50,33 @@ class ChannelUpdateDict(TypedDict):
     htlc_maximum_msat: Optional[int]
 
 
-class MessageMetadata(TypedDict):
+# ---------------------------------------------------------------------
+
+
+# PluginEvent refers to all events published by the gossip-publisher-zmq Core Lightning plugin
+class PluginEventMetadata(TypedDict):
     type: int
     timestamp: int
     sender_node_id: str
-    length: str  # Length in bytes without starting 2-byte type
+    length: str  # Length in bytes without starting 2-byte typ
+
+
+# Base structure for all events
+class BasePluginEvent(TypedDict):
+    metadata: PluginEventMetadata
+    raw_hex: str
+
+
+class PluginChannelAnnouncementEvent(BasePluginEvent):
+    parsed: ChannelAnnouncementDict
+
+
+class PluginNodeAnnouncementEvent(BasePluginEvent):
+    parsed: NodeAnnouncementDict
+
+
+class PluginChannelUpdateEvent(BasePluginEvent):
+    parsed: ChannelUpdateDict
 
 
 ParsedGossipDict = Union[
@@ -64,7 +86,26 @@ ParsedGossipDict = Union[
 ]
 
 
-class GossipPayload(TypedDict):
-    metadata: MessageMetadata
-    raw_hex: str
+class PluginEvent(BasePluginEvent):
     parsed: ParsedGossipDict
+
+
+# ---------------------------------------------------------------------
+
+
+# PlatformEvent refers to all messages inside the ln-history platform
+class PlatformEventMetadata(TypedDict):
+    type: int
+    id: str
+    timestamp: int
+
+
+class PlatformEvent(TypedDict):
+    metadata: PlatformEventMetadata
+    raw_hex: str
+
+
+# ---------------------------------------------------------------------
+
+# Structure of the Cache that checks duplicates of gossip messages
+GossipCache = dict[str, list[int]]

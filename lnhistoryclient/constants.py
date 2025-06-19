@@ -1,4 +1,4 @@
-# BOLT #7 types
+# BOLT #7 types, see https://github.com/lightning/bolts/blob/master/07-routing-gossip.md
 MSG_TYPE_CHANNEL_ANNOUNCEMENT = 256
 MSG_TYPE_NODE_ANNOUNCEMENT = 257
 MSG_TYPE_CHANNEL_UPDATE = 258
@@ -39,5 +39,7 @@ CORE_LIGHTNING_TYPES = {
     MSG_TYPE_CHANNEL_DYING,
 }
 
+# Header format
+HEADER_FORMAT = ">HHII"  # flags(2) + len(2) + crc(4) + timestamp(4)
 
 ALL_TYPES = set(CORE_LIGHTNING_TYPES) | set(LIGHTNING_TYPES)
