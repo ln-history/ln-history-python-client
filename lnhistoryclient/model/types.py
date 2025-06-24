@@ -64,7 +64,7 @@ class PluginEventMetadata(TypedDict):
 # Base structure for all events
 class BasePluginEvent(TypedDict):
     metadata: PluginEventMetadata
-    raw_hex: str
+    raw_gossip_bytes: bytes
 
 
 class PluginChannelAnnouncementEvent(BasePluginEvent):
@@ -96,13 +96,13 @@ class PluginEvent(BasePluginEvent):
 # PlatformEvent refers to all messages inside the ln-history platform
 class PlatformEventMetadata(TypedDict):
     type: int
-    id: str
+    id: bytes  # SHA256-Hash of raw_gossip_bytes
     timestamp: int
 
 
 class PlatformEvent(TypedDict):
     metadata: PlatformEventMetadata
-    raw_hex: str
+    raw_gossip_bytes: bytes
 
 
 # ---------------------------------------------------------------------
