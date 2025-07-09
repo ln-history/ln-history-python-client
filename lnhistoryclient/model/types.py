@@ -107,5 +107,20 @@ class PlatformEvent(TypedDict):
 
 # ---------------------------------------------------------------------
 
-# Structure of the Cache that checks duplicates of gossip messages
-GossipCache = dict[str, list[int]]
+# Structure of the cache to check for duplicate gossip_messages
+"""
+{
+    <gossip_id_1>: [
+        <node_id_1>: [0, 2],
+        <node_id_2>: [1],
+        <node_id_3>: [1, 3]
+    ],
+    <gossip_id_2>: [
+        <node_id_1>: [1],
+        <node_id_2>: [0, 3],
+        <node_id_3>: [2, 3]
+    ],
+    ...
+}
+"""
+GossipIdCacheValue = dict[str, list[int]]

@@ -1,10 +1,12 @@
 import io
 import struct
-from typing import Union
+from typing import Any, Dict, Union
 
 from lnhistoryclient.model.ChannelAnnouncement import ChannelAnnouncement
 from lnhistoryclient.model.ChannelUpdate import ChannelUpdate
 from lnhistoryclient.model.NodeAnnouncement import NodeAnnouncement
+from lnhistoryclient.model.platform_internal.PlatformEvent import PlatformEvent
+from lnhistoryclient.model.platform_internal.PlatformEventMetadata import PlatformEventMetadata
 from lnhistoryclient.parser.common import read_exact
 
 
@@ -137,3 +139,69 @@ def parse_channel_update(data: Union[bytes, io.BytesIO]) -> ChannelUpdate:
         fee_proportional_millionths=fee_proportional_millionths,
         htlc_maximum_msat=htlc_maximum_msat,
     )
+
+
+def parse_platform_event(data: Dict[str, Any]) -> PlatformEvent:
+    """
+    Validates and parses a dictionary into a PlatformEvent dataclass.
+
+    This function ensures that the input dictionary has the correct structure and types
+    expected for a PlatformEvent, which includes:
+      - A 'metadata' dict with fields:
+          - 'type': int
+          - 'id': bytes
+          - 'timestamp': int
+      - A 'raw_gossip_bytes' field: bytes or hex string
+
+    Args:
+        data (Dict[str, Any]): The untrusted dictionary to validate and parse.
+
+    Returns:
+        PlatformEvent: A fully validated and parsed event object.
+
+    Raises:
+        ValueError: If the structure or types are incorrect.
+    """
+
+    if not isinstance(data, dict):
+        raise ValueError("PlatformEvent must be a dictionary")
+
+    if "metadata" not in data or not isinstance(data["metadata"], dict):
+        raise ValueError("PlatformEvent must contain a 'metadata' dictionary")
+
+    meta = data["metadata"]
+    missing_meta_keys = [k for k in ("type", "id", "timestamp") if k not in meta]
+    if missing_meta_keys:
+        raise ValueError(f"Missing keys in metadata: {missing_meta_keys}")
+
+    # --- Validate metadata.type ---
+    if not isinstance(meta["type"], int):
+        raise ValueError(f"'metadata.type' must be an integer, got {type(meta['type'])}")
+
+    # --- Validate metadata.id ---
+    id_value = meta["id"]
+    if isinstance(id_value, bytes):
+        id_bytes = id_value
+    else:
+        raise ValueError(f"'metadata.id' must be bytes, got {type(id_value)}")
+
+    if len(id_bytes) != 32:
+        raise ValueError("metadata.id must be exactly 32 bytes (SHA256 hash)")
+
+    # --- Validate timestamp ---
+    if not isinstance(meta["timestamp"], int):
+        raise ValueError(f"'timestamp' must be an integer, got {type(meta['timestamp'])}")
+
+    metadata = PlatformEventMetadata(type=meta["type"], id=id_bytes, timestamp=meta["timestamp"])
+
+    # --- Validate raw_gossip_bytes ---
+    raw_gossip_value = data.get("raw_gossip_bytes")
+    if raw_gossip_value is None:
+        raise ValueError("Missing 'raw_gossip_bytes' field")
+
+    if isinstance(raw_gossip_value, bytes):
+        raw_gossip_bytes = raw_gossip_value
+    else:
+        raise ValueError(f"raw_gossip_bytes must be bytes, got {type(raw_gossip_value)}")
+
+    return PlatformEvent(metadata=metadata, raw_gossip_bytes=raw_gossip_bytes)
