@@ -149,9 +149,9 @@ def parse_platform_event(data: Dict[str, Any]) -> PlatformEvent:
     expected for a PlatformEvent, which includes:
       - A 'metadata' dict with fields:
           - 'type': int
-          - 'id': bytes
+          - 'id': hex string
           - 'timestamp': int
-      - A 'raw_gossip_bytes' field: bytes or hex string
+      - A 'raw_gossip_hex' field: hex string
 
     Args:
         data (Dict[str, Any]): The untrusted dictionary to validate and parse.
@@ -180,28 +180,31 @@ def parse_platform_event(data: Dict[str, Any]) -> PlatformEvent:
 
     # --- Validate metadata.id ---
     id_value = meta["id"]
-    if isinstance(id_value, bytes):
-        id_bytes = id_value
-    else:
-        raise ValueError(f"'metadata.id' must be bytes, got {type(id_value)}")
+    if not isinstance(id_value, str):
+        raise ValueError(f"'metadata.id' must be a hex string, got {type(id_value)}")
 
-    if len(id_bytes) != 32:
-        raise ValueError("metadata.id must be exactly 32 bytes (SHA256 hash)")
+    if len(id_value) != 64:
+        raise ValueError("metadata.id must be exactly 64 hex characters (32 bytes)")
+
+    try:
+        _ = bytes.fromhex(id_value)
+    except ValueError as ve:
+        raise ValueError(f"'metadata.id' {id_value} is not valid hex: {ve}") from ve
 
     # --- Validate timestamp ---
     if not isinstance(meta["timestamp"], int):
         raise ValueError(f"'timestamp' must be an integer, got {type(meta['timestamp'])}")
 
-    metadata = PlatformEventMetadata(type=meta["type"], id=id_bytes, timestamp=meta["timestamp"])
+    metadata = PlatformEventMetadata(type=meta["type"], id=id_value, timestamp=meta["timestamp"])
 
-    # --- Validate raw_gossip_bytes ---
-    raw_gossip_value = data.get("raw_gossip_bytes")
-    if raw_gossip_value is None:
-        raise ValueError("Missing 'raw_gossip_bytes' field")
+    # --- Validate raw_gossip_hex ---
+    raw_gossip_value = data.get("raw_gossip_hex")
+    if not isinstance(raw_gossip_value, str):
+        raise ValueError(f"'raw_gossip_hex' must be a hex string, got {type(raw_gossip_value)}")
 
-    if isinstance(raw_gossip_value, bytes):
-        raw_gossip_bytes = raw_gossip_value
-    else:
-        raise ValueError(f"raw_gossip_bytes must be bytes, got {type(raw_gossip_value)}")
+    try:
+        _ = bytes.fromhex(raw_gossip_value)
+    except ValueError as ve:
+        raise ValueError(f"'raw_gossip_hex' {raw_gossip_value} is not valid hex: {ve}") from ve
 
-    return PlatformEvent(metadata=metadata, raw_gossip_bytes=raw_gossip_bytes)
+    return PlatformEvent(metadata=metadata, raw_gossip_hex=raw_gossip_value)
