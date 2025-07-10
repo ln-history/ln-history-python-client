@@ -64,7 +64,7 @@ class PluginEventMetadata(TypedDict):
 # Base structure for all events
 class BasePluginEvent(TypedDict):
     metadata: PluginEventMetadata
-    raw_gossip_bytes: bytes
+    raw_hex: str
 
 
 class PluginChannelAnnouncementEvent(BasePluginEvent):
