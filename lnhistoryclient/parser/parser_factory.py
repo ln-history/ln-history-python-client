@@ -3,8 +3,30 @@
 import io
 from typing import Callable, Optional, Union
 
-from lnhistoryclient.parser.common import get_message_type_by_raw_hex
+from lnhistoryclient.model.core_lightning_internal.types import ParsedCoreLightningGossipDict
+from lnhistoryclient.model.types import ParsedGossipDict
+from lnhistoryclient.parser.common import get_message_type_by_bytes
 from lnhistoryclient.parser.parser_map import PARSER_MAP
+
+
+def parse_gossip_msg(raw: bytes) -> Optional[Union[ParsedGossipDict, ParsedCoreLightningGossipDict]]:
+    """
+    Parse a raw gossip message into a dataclass.
+
+    Args:
+        raw (bytes): Raw gossip message.
+
+    Returns:
+        Optional[Union[ParsedGossipDict, ParsedCoreLightningGossipDict]]: Parsed model or None if not parseable.
+    """
+    parser = get_parser_from_bytes(raw)
+    if parser is None:
+        return None
+
+    try:
+        return parser(raw)
+    except Exception:
+        return None
 
 
 def get_parser_by_message_type(message_type: int) -> Callable:
@@ -26,7 +48,7 @@ def get_parser_by_message_type(message_type: int) -> Callable:
         raise ValueError(f"No parser found for message type {message_type}") from e
 
 
-def get_parser_from_raw_hex(raw_hex: Union[bytes, io.BytesIO]) -> Optional[Callable]:
+def get_parser_from_bytes(raw_hex: Union[bytes, io.BytesIO]) -> Optional[Callable]:
     """
     Convenience method to get parser directly from raw message bytes.
 
@@ -46,7 +68,7 @@ def get_parser_from_raw_hex(raw_hex: Union[bytes, io.BytesIO]) -> Optional[Calla
         peek = raw_hex[:2]
 
     try:
-        msg_type = get_message_type_by_raw_hex(peek)
+        msg_type = get_message_type_by_bytes(peek)
         if msg_type is None:
             return None
         return get_parser_by_message_type(msg_type)

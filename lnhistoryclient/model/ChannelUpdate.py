@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from lnhistoryclient.model.types import ChannelUpdateDict
 from lnhistoryclient.parser.common import get_scid_from_int
@@ -36,7 +37,7 @@ class ChannelUpdate:
     htlc_minimum_msat: int
     fee_base_msat: int
     fee_proportional_millionths: int
-    htlc_maximum_msat: int | None = None
+    htlc_maximum_msat: Optional[int] = None
 
     @property
     def scid_str(self) -> str:

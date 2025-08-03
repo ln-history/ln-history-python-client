@@ -3,14 +3,55 @@ import codecs
 import io
 import ipaddress
 import struct
-from typing import Optional
+from typing import Optional, Union
 
 from lnhistoryclient.constants import CORE_LIGHTNING_TYPES, LIGHTNING_TYPES
 from lnhistoryclient.model.Address import Address
 from lnhistoryclient.model.AddressType import AddressType
 
 
-def get_message_type_by_raw_hex(raw_hex: bytes) -> Optional[int]:
+def varint_decode(data: Union[bytes, io.BytesIO]) -> Optional[int]:
+    """
+    Decodes a Bitcoin-style variable-length integer (varint) from a stream or bytes.
+
+    This function reads from a binary stream or byte input to decode an integer that is
+    encoded using Bitcoin's varint encoding:
+    - 1 byte if value < 0xFD
+    - 3 bytes total else if value <= 0xFFFF (prefix 0xFD)
+    - 5 bytes total else if value <= 0xFFFFFFFF (prefix 0xFE)
+    - 9 bytes total else if value <= 0xFFFFFFFFFFFFFFFF (prefix 0xFF)
+
+    Args:
+        data (Union[bytes, io.BytesIO]): Input bytes or a BytesIO stream.
+
+    Returns:
+        Optional[int]: The decoded integer, or None if the input is empty.
+
+    Raises:
+        ValueError: If there are not enough bytes to decode a complete varint.
+    """
+    if isinstance(data, bytes):
+        data = io.BytesIO(data)
+
+    try:
+        raw = read_exact(data, 1)
+        if len(raw) != 1:
+            return None
+
+        prefix = raw[0]
+        if prefix < 0xFD:
+            return prefix
+        elif prefix == 0xFD:
+            return int(struct.unpack("<H", read_exact(data, 2))[0])
+        elif prefix == 0xFE:
+            return int(struct.unpack("<L", read_exact(data, 4))[0])
+        else:
+            return int(struct.unpack("<Q", read_exact(data, 8))[0])
+    except Exception:
+        return None
+
+
+def get_message_type_by_bytes(raw_bytes: bytes) -> Optional[int]:
     """
     Extract the Lightning message type from the first two bytes.
 
@@ -25,10 +66,10 @@ def get_message_type_by_raw_hex(raw_hex: bytes) -> Optional[int]:
     Raises:
         ValueError: If raw_hex is less than 2 bytes.
     """
-    if len(raw_hex) < 2:
+    if len(raw_bytes) < 2:
         raise ValueError("Insufficient data: Expected at least 2 bytes to extract message type.")
 
-    msg_type: int = struct.unpack(">H", raw_hex[:2])[0]
+    msg_type: int = struct.unpack(">H", raw_bytes[:2])[0]
     if msg_type in LIGHTNING_TYPES or msg_type in CORE_LIGHTNING_TYPES:
         return msg_type
     return None
