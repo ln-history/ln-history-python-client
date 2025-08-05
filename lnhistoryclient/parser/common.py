@@ -51,6 +51,39 @@ def varint_decode(data: Union[bytes, io.BytesIO]) -> Optional[int]:
         return None
 
 
+def varint_encode(value: int) -> bytes:
+    """
+    Encodes an integer into Bitcoin-style variable-length integer (varint).
+
+    Encoding rules:
+    - If value < 0xFD: encode directly as 1 byte.
+    - If value <= 0xFFFF: prefix with 0xFD and append value as little-endian uint16.
+    - If value <= 0xFFFFFFFF: prefix with 0xFE and append value as little-endian uint32.
+    - Otherwise: prefix with 0xFF and append value as little-endian uint64.
+
+    Args:
+        value (int): The integer to encode.
+
+    Returns:
+        bytes: The Bitcoin varint encoding of the integer.
+
+    Raises:
+        ValueError: If the value is negative or too large to encode in uint64.
+    """
+    if value < 0:
+        raise ValueError("varint cannot encode negative values")
+    if value < 0xFD:
+        return struct.pack("<B", value)
+    elif value <= 0xFFFF:
+        return b"\xfd" + struct.pack("<H", value)
+    elif value <= 0xFFFFFFFF:
+        return b"\xfe" + struct.pack("<L", value)
+    elif value <= 0xFFFFFFFFFFFFFFFF:
+        return b"\xff" + struct.pack("<Q", value)
+    else:
+        raise ValueError("varint too large (must fit in uint64)")
+
+
 def get_message_type_by_bytes(raw_bytes: bytes) -> Optional[int]:
     """
     Extract the Lightning message type from the first two bytes.
