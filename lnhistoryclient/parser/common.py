@@ -3,14 +3,14 @@ import codecs
 import io
 import ipaddress
 import struct
-from typing import Optional, Union
+from typing import BinaryIO, Optional, Union
 
 from lnhistoryclient.constants import CORE_LIGHTNING_TYPES, LIGHTNING_TYPES
 from lnhistoryclient.model.Address import Address
 from lnhistoryclient.model.AddressType import AddressType
 
 
-def varint_decode(data: Union[bytes, io.BytesIO]) -> Optional[int]:
+def varint_decode(data: Union[bytes, BinaryIO]) -> Optional[int]:
     """
     Decodes a Bitcoin-style variable-length integer (varint) from a stream or bytes.
 
@@ -182,15 +182,12 @@ def parse_address(b: io.BytesIO) -> Optional[Address]:
         return None
 
 
-def read_exact(b: io.BytesIO, n: int) -> bytes:
+def read_exact(b: BinaryIO, n: int) -> bytes:
     """
-    Reads exactly `n` bytes from a BytesIO stream or raises an error.
-
-    This ensures the requested number of bytes is available,
-    which is useful for deserializing structured binary data.
+    Reads exactly `n` bytes from a binary stream or raises an error.
 
     Args:
-        b (io.BytesIO): Input stream to read from.
+        b (BinaryIO): Input stream to read from (file, BytesIO, etc.).
         n (int): Number of bytes to read.
 
     Returns:
