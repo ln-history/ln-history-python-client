@@ -1,3 +1,2 @@
 networkx
-pandas
-pyarrow
+types-requests

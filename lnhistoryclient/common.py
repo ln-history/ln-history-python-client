@@ -1,6 +1,6 @@
 import struct
 from collections import defaultdict
-from typing import Dict, Iterator, List, Set, Union
+from typing import Dict, Iterator, List, Set, Tuple, Union
 
 import networkx as nx
 
@@ -141,7 +141,7 @@ def create_network_graph(file_path: str, use_postgres_format: bool = False) -> n
     # Storage for processing messages
     node_announcements: Dict[str, List[NodeAnnouncement]] = defaultdict(list)  # node_id -> list of announcements
     channel_announcements: Dict[str, ChannelAnnouncement] = {}  # scid -> announcement
-    channel_updates: Dict[tuple, ChannelUpdate] = {}  # (scid, direction) -> update
+    channel_updates: Dict[Tuple[str, bool], ChannelUpdate] = {}  # (scid, direction) -> update
 
     # Counters for logging
     node_announcement_counts: Dict[str, int] = defaultdict(int)
