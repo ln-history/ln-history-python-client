@@ -10,26 +10,64 @@ from lnhistoryclient.model.Address import Address
 from lnhistoryclient.model.AddressType import AddressType
 
 
-def varint_decode(data: Union[bytes, BinaryIO]) -> Optional[int]:
+def varint_decode(data: Union[bytes, io.BytesIO], big_endian: bool = False) -> Optional[int]:
     """
     Decodes a Bitcoin-style variable-length integer (varint) from a stream or bytes.
 
-    This function reads from a binary stream or byte input to decode an integer that is
-    encoded using Bitcoin's varint encoding:
-    - 1 byte if value < 0xFD
-    - 3 bytes total else if value <= 0xFFFF (prefix 0xFD)
-    - 5 bytes total else if value <= 0xFFFFFFFF (prefix 0xFE)
-    - 9 bytes total else if value <= 0xFFFFFFFFFFFFFFFF (prefix 0xFF)
+    Bitcoin's varint encoding:
+    --------------------------
+    A "varint" is used to encode unsigned integers efficiently by varying
+    the number of bytes based on the value size. This is used throughout
+    the Bitcoin protocol (for example, to encode the number of inputs
+    and outputs in a transaction).
 
-    Args:
-        data (Union[bytes, io.BytesIO]): Input bytes or a BytesIO stream.
+    The encoding rules are:
+      - If value < 0xFD (253): encode as 1 byte (no prefix)
+      - If value <= 0xFFFF (65535): prefix 0xFD + 2 bytes
+      - If value <= 0xFFFFFFFF (4.29e9): prefix 0xFE + 4 bytes
+      - If value <= 0xFFFFFFFFFFFFFFFF (~1.84e19): prefix 0xFF + 8 bytes
 
-    Returns:
-        Optional[int]: The decoded integer, or None if the input is empty.
+    Endianness in Bitcoin:
+    ----------------------
+    *Bitcoin always encodes the multi-byte portion in little-endian order.*
+    This means:
+      - 0xFD followed by 2 bytes: interpreted as little-endian 16-bit integer
+      - 0xFE followed by 4 bytes: interpreted as little-endian 32-bit integer
+      - 0xFF followed by 8 bytes: interpreted as little-endian 64-bit integer
 
-    Raises:
-        ValueError: If there are not enough bytes to decode a complete varint.
+    This matches the general rule that Bitcoin uses little-endian encoding
+    for integers in protocol messages, block headers, and transaction data.
+    (Only human-readable hex strings — like block hashes — are shown big-endian.)
+
+    Parameters
+    ----------
+    data : Union[bytes, io.BytesIO]
+        The input to decode. Can be a raw bytes object or an already-open
+        BytesIO stream positioned at the varint start.
+    big_endian : bool, default False
+        If True, interprets multi-byte integers as big-endian instead of
+        Bitcoin's default little-endian. This is primarily for testing
+        or decoding non-standard data.
+
+    Returns
+    -------
+    Optional[int]
+        The decoded integer value, or None if the input is empty or invalid.
+
+    Raises
+    ------
+    ValueError
+        If there are not enough bytes to decode a complete varint.
+        (Caught internally — function returns None instead.)
+
+    Notes
+    -----
+    - For correct Bitcoin decoding, always use the default `big_endian=False`.
+    - The prefix byte itself (0xFD, 0xFE, 0xFF) is a single byte, so endianness
+      does not affect it.
+    - This function will return None if decoding fails for any reason.
     """
+
     if isinstance(data, bytes):
         data = io.BytesIO(data)
 
@@ -39,14 +77,16 @@ def varint_decode(data: Union[bytes, BinaryIO]) -> Optional[int]:
             return None
 
         prefix = raw[0]
+        endian_char = ">" if big_endian else "<"
+
         if prefix < 0xFD:
             return prefix
         elif prefix == 0xFD:
-            return int(struct.unpack("<H", read_exact(data, 2))[0])
+            return int(struct.unpack(f"{endian_char}H", read_exact(data, 2))[0])
         elif prefix == 0xFE:
-            return int(struct.unpack("<L", read_exact(data, 4))[0])
+            return int(struct.unpack(f"{endian_char}L", read_exact(data, 4))[0])
         else:
-            return int(struct.unpack("<Q", read_exact(data, 8))[0])
+            return int(struct.unpack(f"{endian_char}Q", read_exact(data, 8))[0])
     except Exception:
         return None
 

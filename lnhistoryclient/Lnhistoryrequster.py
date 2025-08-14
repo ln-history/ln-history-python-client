@@ -2,6 +2,8 @@ import json
 import os
 import tempfile
 import time
+from ast import List
+from collections import defaultdict
 from datetime import datetime
 from typing import Any, Dict, Optional, Union
 
@@ -49,7 +51,7 @@ class LnhistoryRequester:
         - Converts list/set/dict to string
         - Replaces None with empty string (GraphML doesn't support None)
         """
-        restricted_formats = {"graphml"}  # Add more formats if necessary
+        restricted_formats = {"graphml"}
         if target_format.lower() not in restricted_formats:
             return graph  # No sanitization needed
 
@@ -186,7 +188,7 @@ class LnhistoryRequester:
         self,
         start_timestamp: datetime,
         end_timestamp: datetime,
-        return_graph: bool = True,
+        original: bool = False,
         save_to_file: Optional[str] = None,
         format: Optional[str] = None,
     ) -> Union[nx.DiGraph, str]:
@@ -227,6 +229,32 @@ class LnhistoryRequester:
                 elif isinstance(msg, ChannelUpdate):
                     results["channel_updates"].append(msg.to_dict())
 
+            if original:
+                return results
+            else:
+                # We only add channel_updates if one (or both) of the parsed values: fee_base_msat, fee_proportional_millionths is different from the previous channel_update (with identical scid)
+                # First we group the channel_updates by scid
+                channel_updates_by_scid: List[str, List[ChannelUpdate]] = defaultdict(list)
+                for update in results["channel_updates"]:
+                    channel_updates_by_scid[update["scid"]].append(update)
+
+                # Then we filter the channel_updates by scid
+                for _, updates in channel_updates_by_scid.items():
+                    # Sort the updates by timestamp
+                    updates.sort(key=lambda x: x["timestamp"])
+
+                    # Check if the fee_base_msat, fee_proportional_millionths are different from the previous update
+                    for i in range(1, len(updates)):
+                        if (
+                            updates[i]["fee_base_msat"] != updates[i - 1]["fee_base_msat"]
+                            or updates[i]["fee_proportional_millionths"]
+                            != updates[i - 1]["fee_proportional_millionths"]
+                        ):
+                            # If so, we can remove the last update
+                            updates.pop()
+
+                # Then we return the results
+                return results
             return results
 
         except Exception as e:
