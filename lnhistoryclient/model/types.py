@@ -56,9 +56,10 @@ class ChannelUpdateDict(TypedDict):
 # PluginEvent refers to all events published by the gossip-publisher-zmq Core Lightning plugin
 class PluginEventMetadata(TypedDict):
     type: int
+    name: str
     timestamp: int
     sender_node_id: str
-    length: str  # Length in bytes without starting 2-byte typ
+    length: int  # Length in bytes without starting 2-byte typ
 
 
 # Base structure for all events

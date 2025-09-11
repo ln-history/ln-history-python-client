@@ -1,6 +1,7 @@
 /temp
 temp.*
 *.bin
+analysis.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
