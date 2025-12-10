@@ -30,7 +30,7 @@ class LnhistoryRequester:
 
         Args:
             api_key: API key for authentication
-            backend_url: Backend URL (defaults to https://apiv2.ln-history.info)
+            backend_url: Backend URL (defaults to https://api.ln-history.info)
             default_format: Default format for responses (json, dot, gml, graphml)
         """
         if not api_key:
@@ -40,7 +40,7 @@ class LnhistoryRequester:
             raise ValueError(f"Format must be one of: {FORMATS}")
 
         self.api_key: str = api_key
-        self.backend_url: str = backend_url if backend_url else "https://apiv2.ln-history.info"
+        self.backend_url: str = backend_url if backend_url else "https://api.ln-history.info"
         self.default_format: str = default_format
         self.session = requests.Session()
         self.session.headers.update({"x-api-key": self.api_key, "User-Agent": "LnhistoryRequester-Python-Client"})

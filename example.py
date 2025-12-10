@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 
-from lnhistoryclient.Lnhistoryrequster import LnhistoryRequester, LnhistoryRequesterError
+from lnhistoryclient.Lnhistoryrequester import LnhistoryRequester, LnhistoryRequesterError
 
 # Example usage of the client
 api_key = "YOUR-API-KEY"
