@@ -10,6 +10,13 @@ Requires the ``analysis`` extra: ``pip install lnhistoryclient[analysis]``.
 
 from lnhistoryclient.analysis.centrality import Metric, top_nodes_by
 from lnhistoryclient.analysis.concentration import gini, lorenz_xy, top_pct_share
+from lnhistoryclient.analysis.payments import (
+    PaymentResult,
+    RandomPaymentSummary,
+    simulate_payment,
+    simulate_random_payments,
+)
+from lnhistoryclient.analysis.routing import CheapestFeeRouter, Route, RoutingStrategy
 from lnhistoryclient.analysis.weights import DEFAULT_AMOUNT_SAT, Weighting
 
 __all__ = [
@@ -20,4 +27,11 @@ __all__ = [
     "gini",
     "lorenz_xy",
     "top_pct_share",
+    "simulate_payment",
+    "simulate_random_payments",
+    "PaymentResult",
+    "RandomPaymentSummary",
+    "RoutingStrategy",
+    "CheapestFeeRouter",
+    "Route",
 ]
