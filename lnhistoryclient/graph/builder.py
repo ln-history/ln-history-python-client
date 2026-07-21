@@ -161,7 +161,7 @@ def build_multidigraph(messages: Iterable[ParsedMessage]) -> nx.MultiDiGraph:
     return graph
 
 
-def _parse_raw_message(raw: bytes) -> Optional[ParsedMessage]:
+def parse_raw_message(raw: bytes) -> Optional[ParsedMessage]:
     """Parse a single raw gossip message (with 2-byte type prefix) if it is a BOLT #7
     announcement/update; otherwise return ``None``."""
     if len(raw) < 2:
@@ -183,7 +183,7 @@ def _parse_raw_message(raw: bytes) -> Optional[ParsedMessage]:
 def iter_parsed_messages(path_to_file: str, start: int = 0) -> Iterable[ParsedMessage]:
     """Yield parsed BOLT #7 messages from a gossip file (format auto-detected)."""
     for raw in read_gossip_file(path_to_file, start=start):
-        parsed = _parse_raw_message(raw)
+        parsed = parse_raw_message(raw)
         if parsed is not None:
             yield parsed
 
