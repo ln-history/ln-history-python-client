@@ -76,6 +76,11 @@ def _annotate_distance(graph: nx.Graph, weighting: Weighting, amount_sat: int) -
     missing = 0
     for _u, _v, attrs in graph.edges(data=True):
         dist = path_distance(attrs, weighting, amount_sat)
+        # Weighted betweenness (Dijkstra) misbehaves and can yield NaN on zero-weight
+        # edges; 0-fee channels are common, so floor fee distances at 1 msat. The offset
+        # is negligible versus real fees and only breaks ties toward fewer hops.
+        if weighting is Weighting.FEE:
+            dist += 1.0
         attrs[_DISTANCE_ATTR] = dist
         if weighting is Weighting.CAPACITY and dist >= 1e12:
             missing += 1
