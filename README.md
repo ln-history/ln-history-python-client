@@ -89,6 +89,44 @@ Please see the doc string of the `read_gossip_file` for detailed information abo
 In short: Various file formats are supported and automatically detected.
 
 
+## Graph building & analytics
+
+Graph construction, network analytics, and the API client live under optional
+submodules and require the `analysis` extra (the core parser stays dependency-free):
+
+```bash
+pip install "lnhistoryclient[analysis]"   # networkx, numpy, scipy, requests, pandas, matplotlib
+```
+
+Fetch a snapshot from the ln-history API and analyse it:
+
+```python
+from datetime import datetime
+from lnhistoryclient.api import LnhistoryRequester
+from lnhistoryclient.graph import graph_stats
+from lnhistoryclient.analysis import Metric, top_nodes_by, simulate_random_payments
+
+with LnhistoryRequester(backend_url="http://localhost:5050") as client:
+    # enrich_capacity=True adds on-chain capacity_sat via the bulk capacities endpoint
+    G = client.get_snapshot(datetime(2021, 6, 1), with_updates=True, enrich_capacity=True)
+
+print(graph_stats(G))                                        # nodes/channels/components
+
+# Node ranking — one entry point, metric + optional weighting:
+top_nodes_by(G, Metric.BETWEENNESS)                          # unweighted routing importance
+top_nodes_by(G, Metric.STRENGTH, weight="capacity")         # most liquidity
+top_nodes_by(G, Metric.BETWEENNESS, weight="fee")           # cheapest-path centrality
+
+# Payment simulation (balance-agnostic — an upper bound on routability):
+summary = simulate_random_payments(G, n=1000, amount_sat=100_000, seed=42)
+print(summary.success_rate, summary.failure_reasons)
+```
+
+The canonical graph is a lossless `networkx.MultiDiGraph` (`build_multidigraph`); use
+`to_directed_simple` / `to_undirected_simple` to project it for routing or topology
+metrics. See `examples/analyse_snapshot.py` for a full showcase. Weighting conventions
+(fee cost, capacity inversion) live in `lnhistoryclient.analysis.weights`.
+
 ## Model
 The library provides [python typing models](https://docs.python.org/3/library/typing.html) for every gossip message.
 See in the project structure section below for details.
@@ -101,11 +139,16 @@ The [model](./lnhistoryclient/model/) directory [python typing models](https://d
 The [parser](./lnhistoryclient/parser/) directory contains all functions to parse a gossip message (including core-lightning internal ones) from raw bytes or hex into something human readable (python typing models). 
 
 ## Requirements
-Python >=3.7, <4.0
+Python >=3.9, <4.0
 
 ### Dependencies
-[networkx](https://pypi.org/project/networkx/)
-[types-requests](https://pypi.org/project/types-requests/)
+The core parser has **no runtime dependencies**. Graph/analytics/API features are opt-in
+via `pip install "lnhistoryclient[analysis]"`, which pulls
+[networkx](https://pypi.org/project/networkx/),
+[numpy](https://pypi.org/project/numpy/), [scipy](https://pypi.org/project/scipy/),
+[requests](https://pypi.org/project/requests/),
+[pandas](https://pypi.org/project/pandas/), and
+[matplotlib](https://pypi.org/project/matplotlib/).
 
 ## Code Style, Linting etc.
 The code has been formatted using [ruff](https://github.com/astral-sh/ruff), [black](https://github.com/psf/black) and [mypy](https://github.com/python/mypy)
