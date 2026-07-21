@@ -11,6 +11,10 @@ MSG_TYPE_PRIVATE_CHANNEL_ANNOUNCEMENT = 4104
 MSG_TYPE_GOSSIP_STORE_ENDED = 4105
 MSG_TYPE_CHANNEL_DYING = 4106
 
+# LND Experimental TLV Types
+# Used in channel_update extensions for negative/inbound fees
+TLV_TYPE_LND_INBOUND_FEES = 55555  # 0x03F9
+
 # Type name map
 GOSSIP_TYPE_NAMES = {
     MSG_TYPE_CHANNEL_ANNOUNCEMENT: "channel_announcement",
@@ -41,5 +45,10 @@ CORE_LIGHTNING_TYPES = {
 
 # Header format
 HEADER_FORMAT = ">HHII"  # flags(2) + len(2) + crc(4) + timestamp(4)
+
+# gossip_store record flag bits (in the 2-byte flags field of each record header)
+GOSSIP_STORE_DELETED_BIT = 0x8000  # record is logically deleted; data bytes are zeroed
+GOSSIP_STORE_PRIVATE_BIT = 0x4000  # private channel gossip (not relayed publicly)
+GOSSIP_STORE_PUSH_BIT = 0x0800  # message should be pushed to peers; data is valid
 
 ALL_TYPES = set(CORE_LIGHTNING_TYPES) | set(LIGHTNING_TYPES)

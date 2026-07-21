@@ -1,3 +1,4 @@
+import io
 import struct
 from collections import defaultdict
 from typing import Dict, Iterator, List, Set, Tuple, Union
@@ -71,7 +72,7 @@ def read_pg_copy_single_column_binary(
     Yields raw_gossip bytes.
     """
 
-    counter_types = {MSG_TYPE_CHANNEL_ANNOUNCEMENT: 0, MSG_TYPE_NODE_ANNOUNCEMENT: 0, MSG_TYPE_CHANNEL_UPDATE: 0}
+    counter_types: Dict[int, int] = defaultdict(int)
 
     try:
         with open(filename, "rb") as file:
@@ -96,22 +97,33 @@ def read_pg_copy_single_column_binary(
                 if len(col_len_bytes) < 4:
                     raise ValueError("Unexpected end of file while reading column length")
 
-                col_len = int.from_bytes(col_len_bytes, byteorder="big")
-                if col_len == -1:
-                    # NULL value
+                col_len = int.from_bytes(col_len_bytes, byteorder="big", signed=True)
+                if col_len < 0:
+                    # NULL value (PostgreSQL sends 0xFFFFFFFF = -1 signed)
                     continue
 
                 msg = read_exact(file, col_len)
-                if len(msg) != col_len:
-                    raise ValueError("Incomplete message data")
+                if len(msg) < 2:
+                    continue
 
-                # Extract the message type (first 2 bytes of the TLV message)
-                msg_type = struct.unpack(">H", msg[:2])[0]
-
-                # Remove the type prefix and length info, leaving only the message value
-                msg_data = strip_known_message_type(
-                    msg
-                )  # assuming type is 2 bytes and length is not included in value part
+                # Two formats depending on API era:
+                # Old (pre-2020-10): [2-byte type][payload]  — all known types start with 0x01
+                # New (2020-10+):    [varint(total_len incl. type)][2-byte type][payload]
+                if msg[0] == 0x01:
+                    # Old format: first byte is the high byte of the 2-byte type (0x0100/0x0101/0x0102)
+                    msg_type = struct.unpack(">H", msg[:2])[0]
+                    msg_data = strip_known_message_type(msg)
+                else:
+                    # New format: varint-prefixed
+                    msg_stream = io.BytesIO(msg)
+                    inner_len = varint_decode(msg_stream)
+                    if inner_len is None:
+                        continue
+                    inner_msg = msg_stream.read(inner_len)  # [type(2)] + [payload]
+                    if len(inner_msg) != inner_len:
+                        continue
+                    msg_type = struct.unpack(">H", inner_msg[:2])[0]
+                    msg_data = strip_known_message_type(inner_msg)
 
                 # Determine which parser to use based on message type
                 counter_types[msg_type] += 1

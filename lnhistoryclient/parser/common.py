@@ -10,6 +10,28 @@ from lnhistoryclient.model.Address import Address
 from lnhistoryclient.model.AddressType import AddressType
 
 
+def strip_varint_len(data: bytes) -> bytes:
+    """
+    Detects and strips the Bitcoin-style VarInt length prefix.
+    Returns the remaining data (which starts with the 2-byte msg type).
+    """
+    if len(data) < 1:
+        return data
+
+    first = data[0]
+
+    if first < 0xFD:
+        return data[1:]
+    elif first == 0xFD:
+        return data[3:]
+    elif first == 0xFE:
+        return data[5:]
+    elif first == 0xFF:
+        return data[9:]
+
+    return data
+
+
 def varint_decode(data: Union[bytes, io.BytesIO], big_endian: bool = False) -> Optional[int]:
     """
     Decodes a Bitcoin-style variable-length integer (varint) from a stream or bytes.

@@ -137,7 +137,7 @@ class LnhistoryRequester:
         return_graph: bool = True,
         save_to_file: Optional[str] = None,
         format: Optional[str] = None,
-        stopwatch: bool = False,
+        stopwatch: Optional[bool] = False,
     ) -> Union[nx.DiGraph, str]:
         timestamp_str = self._format_timestamp(timestamp)
         endpoint = f"ln-history/v1/LightningNetwork/snapshot/{timestamp_str}/copy"
@@ -167,7 +167,7 @@ class LnhistoryRequester:
                     if save_format not in FORMATS:
                         raise ValueError(f"Format must be one of: {FORMATS}")
 
-                    # ✅ Automatically sanitize for restricted formats like GraphML
+                    # Automatically sanitize for restricted formats like GraphML
                     graph = self._sanitize_graph_attributes(graph, save_format)
 
                     self._save_graph_to_format(graph, save_to_file, save_format)
