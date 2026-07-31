@@ -5,9 +5,14 @@
 routers can be added later without changing the payment-simulation API.
 
 Hard constraints (a channel is *excluded* before routing) are applied by
-:func:`routable_view`: a direction is unusable if it is disabled, if the amount is
-below ``htlc_minimum_msat`` or above ``htlc_maximum_msat``, or if it exceeds the
-channel's capacity.
+:func:`routable_view`: a direction is unusable if it carries no ``channel_update``, if
+it is disabled, if the amount is below ``htlc_minimum_msat`` or above
+``htlc_maximum_msat``, or if it exceeds the channel's capacity.
+
+A direction with no ``channel_update`` has **no known policy**, and BOLT #7 requires an
+update before a direction may be used for routing. Treating it as free (the pre-4.1.0
+behaviour) was actively harmful: fee-minimising Dijkstra then *preferred* precisely the
+channels whose cost was unknown. On a 2021 snapshot that was 31% of all directions.
 
 **Balances are unknowable from gossip.** A returned route means a path *could* exist
 and what it *would* cost — it is an upper bound on routability, not a guarantee that
@@ -17,7 +22,7 @@ liquidity sits on the right side of each channel.
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import networkx as nx
 
@@ -43,13 +48,16 @@ def routable_view(directed_simple: nx.DiGraph, amount_sat: int) -> nx.DiGraph:
     """Return a subgraph of edges that can carry ``amount_sat``, with a ``_fee_msat``
     weight attached to each surviving edge.
 
-    Excludes disabled directions and edges whose htlc/capacity bounds cannot carry the
-    amount.
+    Excludes directions with no ``channel_update`` (unknown policy), disabled
+    directions, and edges whose htlc/capacity bounds cannot carry the amount.
     """
     amount_msat = amount_sat * 1000
     view = nx.DiGraph()
     view.add_nodes_from(directed_simple.nodes(data=True))
     for src, dst, attrs in directed_simple.edges(data=True):
+        # No channel_update means no advertised policy: not routable, not free.
+        if not attrs.get("has_update"):
+            continue
         if attrs.get("disabled"):
             continue
         htlc_min = attrs.get("htlc_minimum_msat")
@@ -78,29 +86,39 @@ class RoutingStrategy(ABC):
 class CheapestFeeRouter(RoutingStrategy):
     """Single-path router minimising total forwarding fee (Dijkstra on ``_fee_msat``).
 
-    Fee/cltv accounting follows Lightning convention: the destination is the recipient
-    and charges no forwarding fee, so the final hop's fee is excluded from
-    ``total_fee_msat``. The per-edge fee is computed for the base ``amount_sat`` (the
-    amount-grows-upstream effect is not modelled in v1).
+    Fee/cltv accounting follows Lightning convention: the policy on a directed edge
+    ``u -> v`` is charged by ``u`` for *forwarding* onward. The sender originates the
+    payment rather than forwarding it, so it never charges itself on its own outgoing
+    channel — the **first** edge's fee and cltv delta are excluded, and every
+    subsequent edge's are included. A direct ``src -> dst`` payment therefore costs
+    nothing: there is no forwarder.
+
+    The per-edge fee is computed for the base ``amount_sat`` (the amount-grows-upstream
+    effect is not modelled here).
     """
 
     def find_route(self, routable: nx.DiGraph, src: str, dst: str, amount_sat: int) -> Optional[Route]:
         if src not in routable or dst not in routable:
             return None
+
+        def _weight(u: str, _v: str, attrs: Dict[str, object]) -> float:
+            """Edge cost for pathfinding: the sender pays nothing on its own channel."""
+            return 0.0 if u == src else float(attrs[_FEE_ATTR])  # type: ignore[arg-type]
+
         try:
-            path = nx.dijkstra_path(routable, src, dst, weight=_FEE_ATTR)
+            path = nx.dijkstra_path(routable, src, dst, weight=_weight)
         except (nx.NetworkXNoPath, nx.NodeNotFound):
             return None
 
         edges = list(zip(path[:-1], path[1:], strict=False))
         fees = [int(routable[u][v][_FEE_ATTR]) for u, v in edges]
         cltvs = [int(routable[u][v].get("cltv_expiry_delta") or 0) for u, v in edges]
-        # Recipient (last hop) charges no forwarding fee.
-        total_fee = sum(fees[:-1]) if len(fees) > 1 else 0
+        # Drop the first edge: its policy belongs to the sender, who does not forward.
+        total_fee = sum(fees[1:])
         return Route(
             path=path,
             hops=len(edges),
             total_fee_msat=total_fee,
-            total_cltv=sum(cltvs),
+            total_cltv=sum(cltvs[1:]),
             amount_sat=amount_sat,
         )
