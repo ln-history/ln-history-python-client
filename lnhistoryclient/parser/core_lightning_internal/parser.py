@@ -6,6 +6,7 @@ from lnhistoryclient.model.core_lightning_internal.ChannelAmount import ChannelA
 from lnhistoryclient.model.core_lightning_internal.ChannelDying import ChannelDying
 from lnhistoryclient.model.core_lightning_internal.DeleteChannel import DeleteChannel
 from lnhistoryclient.model.core_lightning_internal.GossipStoreEnded import GossipStoreEnded
+from lnhistoryclient.model.core_lightning_internal.GossipStoreUuid import GossipStoreUuid
 from lnhistoryclient.model.core_lightning_internal.PrivateChannelAnnouncement import PrivateChannelAnnouncement
 from lnhistoryclient.model.core_lightning_internal.PrivateChannelUpdate import PrivateChannelUpdate
 
@@ -89,8 +90,10 @@ def parse_gossip_store_ended(data: Union[bytes, io.BytesIO]) -> GossipStoreEnded
     """
     Parses a byte stream into a GossipStoreEnded object.
 
-    This function reads the equivalent offset (8 bytes) marking the end
-    of a gossip store file segment.
+    Reads the equivalent offset (8 bytes) marking the end of a gossip store
+    file segment, plus — for stores written by CLN >= v26.06 (gossip_store
+    v16) — the 32-byte generation uuid of the successor store. Older stores
+    end after the offset; ``uuid`` is ``None`` for them.
 
     Args:
         data (bytes): Raw binary data representing the end-of-store marker.
@@ -105,7 +108,32 @@ def parse_gossip_store_ended(data: Union[bytes, io.BytesIO]) -> GossipStoreEnded
         raise ValueError("Expected 8 bytes for equivalent offset")
     equivalent_offset = struct.unpack(">Q", offset_bytes)[0]
 
-    return GossipStoreEnded(equivalent_offset=equivalent_offset)
+    uuid_bytes = stream.read(32)
+    uuid = uuid_bytes if len(uuid_bytes) == 32 else None
+
+    return GossipStoreEnded(equivalent_offset=equivalent_offset, uuid=uuid)
+
+
+def parse_gossip_store_uuid(data: Union[bytes, io.BytesIO]) -> GossipStoreUuid:
+    """
+    Parses a byte stream into a GossipStoreUuid object.
+
+    Reads the 32-byte store generation id that CLN >= v26.06 writes at the
+    front of every gossip_store file (type 4107).
+
+    Args:
+        data (bytes): Raw binary data representing the store uuid record.
+
+    Returns:
+        GossipStoreUuid: Parsed store generation id.
+    """
+    stream = data if isinstance(data, io.BytesIO) else io.BytesIO(data)
+
+    uuid = stream.read(32)
+    if len(uuid) != 32:
+        raise ValueError("Expected 32 bytes for store uuid")
+
+    return GossipStoreUuid(uuid=uuid)
 
 
 def parse_private_channel_announcement(data: Union[bytes, io.BytesIO]) -> PrivateChannelAnnouncement:

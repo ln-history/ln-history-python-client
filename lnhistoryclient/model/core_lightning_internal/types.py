@@ -1,4 +1,4 @@
-from typing import TypedDict, Union
+from typing import Optional, TypedDict, Union
 
 from lnhistoryclient.model.types import BasePluginEvent
 
@@ -18,6 +18,13 @@ class DeleteChannelDict(TypedDict):
 
 class GossipStoreEndedDict(TypedDict):
     equivalent_offset: int
+    # hex-encoded 32-byte store generation uuid; None for stores written by
+    # CLN < v26.06 (gossip_store < v16), whose ended records carry no uuid
+    uuid: Optional[str]
+
+
+class GossipStoreUuidDict(TypedDict):
+    uuid: str  # hex-encoded 32 bytes
 
 
 class PrivateChannelAnnouncementDict(TypedDict):
@@ -57,11 +64,16 @@ class PluginChannelAmountEvent(BasePluginEvent):
     parsed: ChannelAmountDict
 
 
+class PluginGossipStoreUuidEvent(BasePluginEvent):
+    parsed: GossipStoreUuidDict
+
+
 ParsedCoreLightningGossipDict = Union[
     ChannelAmountDict,
     ChannelDyingDict,
     DeleteChannelDict,
     GossipStoreEndedDict,
+    GossipStoreUuidDict,
     PrivateChannelAnnouncementDict,
     PrivateChannelUpdateDict,
 ]
