@@ -58,24 +58,29 @@ class LnhistoryRequester:
     """Client for the ln-history REST API.
 
     Args:
-        api_key: Optional ``x-api-key``. Not required when the backend runs with auth
-            disabled (the default in local/dev deployments).
-        backend_url: Base URL (defaults to ``http://localhost:5050``).
+        api_key: Optional ``x-api-key``. Falls back to the ``LN_HISTORY_API_KEY``
+            environment variable, so the example scripts work against the deployed API
+            without every one of them growing a ``--key`` flag. Not required when the
+            backend runs with auth disabled (the default in local/dev deployments).
+        backend_url: Base URL. Defaults to ``LN_HISTORY_BACKEND_URL`` if set, else
+            ``http://localhost:5050``.
         timeout: Per-request timeout in seconds.
     """
 
     def __init__(
         self,
         api_key: Optional[str] = None,
-        backend_url: str = DEFAULT_BACKEND_URL,
+        backend_url: Optional[str] = None,
         timeout: int = 60,
     ):
-        self.backend_url = backend_url.rstrip("/")
+        resolved = backend_url or os.environ.get("LN_HISTORY_BACKEND_URL") or DEFAULT_BACKEND_URL
+        self.backend_url = resolved.rstrip("/")
         self.timeout = timeout
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": "lnhistoryclient-python"})
-        if api_key:
-            self.session.headers.update({"x-api-key": api_key})
+        key = api_key or os.environ.get("LN_HISTORY_API_KEY")
+        if key:
+            self.session.headers.update({"x-api-key": key})
 
     # ── low-level helpers ────────────────────────────────────────────────────────
 
@@ -187,9 +192,52 @@ class LnhistoryRequester:
 
 _KNOWN_BOLT7_TYPES = frozenset({MSG_TYPE_CHANNEL_ANNOUNCEMENT, MSG_TYPE_NODE_ANNOUNCEMENT, MSG_TYPE_CHANNEL_UPDATE})
 
+#: Byte offset of ``message_flags`` inside a type-less ``channel_update`` payload:
+#: signature 64 + chain_hash 32 + scid 8 + timestamp 4.
+_CU_FLAGS_OFFSET = 108
+#: ``channel_update`` payload length excluding the optional ``htlc_maximum_msat``:
+#: the 108 above + message_flags 1 + channel_flags 1 + cltv 2 + htlc_min 8 + fee 4 + 4.
+_CU_BASE_PAYLOAD = 128
+_CHANNEL_UPDATE_TYPE_BYTES = b"\x01\x02"
+
 
 def _u16(buf: bytes, off: int) -> int:
     return struct.unpack_from(">H", buf, off)[0]
+
+
+def _typeless_channel_update(buf: bytes, pos: int, size: int) -> Optional[tuple]:
+    """Recover a ``varint(payload_len) ++ payload`` blob whose 2-byte type was stripped.
+
+    A third framing variant present in the archive: some ``channel_update`` blobs carry
+    the varint but not the type, so neither the unframed nor the framed probe in
+    :func:`_candidate_message` can identify them. Measured against the database on the
+    2026-07-01 snapshot, they are 4.4% of live policies — but losing one also derails the
+    byte-at-a-time resync that follows it, which destroyed a further 1.8 well-formed
+    messages each and cost 12.3% of all policies in total.
+
+    The varint is required to equal the payload length **exactly**, with no tolerance for
+    a TLV tail. That is what makes the branch safe: admitting even a 12-byte tail lets it
+    match arbitrary byte runs and swallow real ``channel_announcement`` blobs (measured:
+    18 channels lost at 12 bytes, 137 at 32). The exact-length rule recovers 99.97% of
+    policies while leaving the channel layer bit-for-bit unchanged. The ~20 blobs that are
+    both type-less *and* carry an inbound-fee TLV stay unrecoverable; that is the trade.
+
+    Returns ``(message_bytes_incl_type, next_pos)``, or ``None`` when the shape does not
+    match. The caller still parses and plausibility-checks the result.
+    """
+    stream = io.BytesIO(buf)
+    stream.seek(pos)
+    value = varint_decode(stream)
+    body = stream.tell()
+    if value is None or body <= pos or body + value > size:
+        return None
+    if value not in (_CU_BASE_PAYLOAD, _CU_BASE_PAYLOAD + 8):
+        return None
+    payload = buf[body : body + value]
+    expected = _CU_BASE_PAYLOAD + (8 if payload[_CU_FLAGS_OFFSET] & 0x01 else 0)
+    if value != expected:
+        return None
+    return _CHANNEL_UPDATE_TYPE_BYTES + payload, body + value
 
 
 def _unframed_message_length(buf: bytes, off: int) -> Optional[int]:
@@ -251,7 +299,9 @@ def _candidate_message(buf: bytes, pos: int, size: int) -> Optional[tuple]:
     sections (payload-length for channels, whole-message-length for updates). So the
     varint value is *not* trusted for length: it is used only to locate the 2-byte type,
     after which the true length is computed from the message's own structure. The type
-    may be at ``pos`` (unframed) or just after a leading varint (framed).
+    may be at ``pos`` (unframed), just after a leading varint (framed), or absent
+    altogether (see :func:`_typeless_channel_update`, tried last so it can never preempt
+    a blob that one of the two type-bearing shapes already explains).
     """
     # Unframed: cursor is already on the type.
     if pos + 2 <= size and _u16(buf, pos) in _KNOWN_BOLT7_TYPES:
@@ -272,20 +322,27 @@ def _candidate_message(buf: bytes, pos: int, size: int) -> Optional[tuple]:
         length = _unframed_message_length(buf, type_pos)
         if length is not None and type_pos + length <= size:
             return buf[type_pos : type_pos + length], type_pos + length
-    return None
+    # Type-less: a varint whose value is exactly a channel_update payload length.
+    return _typeless_channel_update(buf, pos, size)
 
 
 def iter_snapshot_messages(path: str) -> Iterator[ParsedMessage]:
     """Yield parsed BOLT #7 messages from a downloaded snapshot stream.
 
     The stream concatenates ``raw_gossip`` blobs whose framing is currently
-    **inconsistent** in the backend: channel blobs carry a varint payload-length prefix
-    (``varint ++ type ++ payload``), node blobs are often unframed (``type ++ payload``),
-    and the update section carries a 1-byte varint plus a stray byte per record. This
-    reader is adaptive and self-correcting: it forms a candidate blob (framed or
-    unframed), parses it, and accepts it only if the result is plausible (valid pubkey /
-    scid / timestamp). On an implausible or unparseable candidate it advances one byte
-    and resynchronises to the next real message, so stray framing bytes never derail it.
+    **inconsistent** in the backend. Three shapes occur, and all three are handled:
+    ``varint ++ type ++ payload`` (channels, and the varint sometimes counts the type and
+    sometimes does not), bare ``type ++ payload`` (most node blobs), and
+    ``varint ++ payload`` with the type stripped (see :func:`_typeless_channel_update`).
+    This reader is adaptive and self-correcting: it forms a candidate blob, parses it, and
+    accepts it only if the result is plausible (valid pubkey / scid / timestamp). On an
+    implausible or unparseable candidate it advances one byte and resynchronises to the
+    next real message, so stray framing bytes never derail it.
+
+    That resync is not free, which is why the third shape matters more than its share
+    suggests: on the 2026-07-01 snapshot the type-less blobs are 4.4% of live policies,
+    but each one lost also cost ~1.8 well-formed neighbours to the byte-walk that
+    followed. Handling them takes policy recall against the database from 87.7% to 99.97%.
     """
     with open(path, "rb") as f:
         buf = f.read()
