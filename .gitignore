@@ -3,6 +3,11 @@ temp.*
 *.bin
 analysis.py
 
+# Study drivers/results and reference material live in github.com/ln-history/analysis,
+# not in this parser library. Kept on disk here only until that repo exists.
+/examples/study/
+/2410.13784v2.pdf
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
