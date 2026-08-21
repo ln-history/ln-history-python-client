@@ -12,8 +12,29 @@ it should collapse it with one of the projection helpers:
 Capacity is not carried by BOLT #7 ``channel_announcement`` messages. Use
 :func:`attach_capacity` to enrich the graph with real ``capacity_sat`` values fetched
 separately, or rely on the ``htlc_maximum_msat`` proxy that the builder records.
+
+Channel *balances* are not in gossip either. :func:`assign_balances` populates them from
+a user-chosen distribution so payments can be simulated against a stated liquidity
+assumption; see :mod:`lnhistoryclient.graph.balances` for what that assumption does and
+does not mean.
 """
 
+from lnhistoryclient.graph.balances import (
+    Balanced,
+    BalanceDistribution,
+    BalanceScenario,
+    Beta,
+    Custom,
+    Normal,
+    Orientation,
+    Polarised,
+    Uniform,
+    apply_balance_delta,
+    assign_balances,
+    load_balances,
+    save_balances,
+    set_balance,
+)
 from lnhistoryclient.graph.builder import build_multidigraph
 from lnhistoryclient.graph.enrich import attach_capacity
 from lnhistoryclient.graph.projections import to_directed_simple, to_undirected_simple
@@ -25,4 +46,19 @@ __all__ = [
     "to_directed_simple",
     "to_undirected_simple",
     "graph_stats",
+    # balances
+    "assign_balances",
+    "set_balance",
+    "apply_balance_delta",
+    "save_balances",
+    "load_balances",
+    "BalanceScenario",
+    "Orientation",
+    "BalanceDistribution",
+    "Balanced",
+    "Uniform",
+    "Beta",
+    "Normal",
+    "Polarised",
+    "Custom",
 ]
