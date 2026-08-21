@@ -106,7 +106,9 @@ from lnhistoryclient.api import LnhistoryRequester
 from lnhistoryclient.graph import graph_stats
 from lnhistoryclient.analysis import Metric, top_nodes_by, simulate_random_payments
 
-with LnhistoryRequester(backend_url="http://localhost:5050") as client:
+# backend_url falls back to $LN_HISTORY_BACKEND_URL then http://localhost:5050, and the
+# api_key to $LN_HISTORY_API_KEY — the deployed API at https://api.ln-history.info needs one.
+with LnhistoryRequester() as client:
     # enrich_capacity=True adds on-chain capacity_sat via the bulk capacities endpoint
     G = client.get_snapshot(datetime(2021, 6, 1), with_updates=True, enrich_capacity=True)
 
@@ -126,6 +128,112 @@ The canonical graph is a lossless `networkx.MultiDiGraph` (`build_multidigraph`)
 `to_directed_simple` / `to_undirected_simple` to project it for routing or topology
 metrics. See `examples/analyse_snapshot.py` for a full showcase. Weighting conventions
 (fee cost, capacity inversion) live in `lnhistoryclient.analysis.weights`.
+
+## Client-specific pathfinding
+
+`simulate_payment` above finds the *cheapest* route. Real nodes do not: LND, Core
+Lightning, LDK and eclair each trade fees against reliability, timelock and channel age
+differently, and they disagree often enough to change which nodes matter. The
+`analysis.clients` subpackage reproduces each one's weight function and side constraints,
+so a snapshot can be routed as a **specific version of a specific client** would route it.
+
+```python
+from lnhistoryclient.analysis import (
+    ClientRouter, build_trials, client_profile, compare_clients, simulate_payment,
+)
+from lnhistoryclient.analysis.routing import RoutingIndex
+
+# Route as one client would
+lnd = ClientRouter(client_profile("lnd", version="0.17.4"))
+result = simulate_payment(G, alice, bob, amount_sat=100_000, strategy=lnd)
+print(result.route.total_fee_msat, result.route.success_probability)
+
+# Or compare many at once, over the same trials
+comparison = compare_clients(G, ["lnd-apriori", "lnd-bimodal", "cln", "ldk", "eclair-ratios"],
+                             n=500, amount_sat=100_000, seed=42)
+print(comparison.to_frame())        # one row per client
+print(comparison.route_frame())     # one row per (trial, client): fee, hops, cltv, route_key
+print(comparison.hop_frame())       # one row per hop, for per-node fee ledgers
+```
+
+Two clients agree on a payment exactly when their `route_key` matches — it is the ordered
+list of `scid`s, not of nodes, because two routes over the same nodes but different
+parallel channels are genuinely different routes.
+
+On an archived snapshot, draw trials from the **routable core** rather than uniformly.
+Most nodes have no `channel_update` in the archive, so a uniform draw spends most of its
+trials on pairs every client fails together — measuring archive coverage instead of
+pathfinding:
+
+```python
+core = RoutingIndex(G).routable_core(amount_sat=100_000)   # largest mutually-payable set
+comparison = compare_clients(G, trials=build_trials(G, 500, 100_000, seed=42, nodes=core))
+```
+
+Clients are named `implementation[-variant][@version]` — `lnd-bimodal@0.18.0`,
+`eclair-constants-log@0.10.0`, `cln-getroute`. `available_clients()` lists every modelled
+release; `PAPER_CLIENTS` is the nine-variant set benchmarked in the paper below.
+
+| | modelled range | variants | search |
+|---|---|---|---|
+| **LND** | 0.16 – 0.21 | `apriori`, `bimodal`, `uniform` | modified Dijkstra (additive + `attempt_cost / P_path`) |
+| **CLN** | 0.10 – 26.04 | `pay`, `getroute` | Dijkstra |
+| **LDK** | 0.0.117 – 0.2.x | `default`, `linear` | Dijkstra, cost `max(fee, htlc_min) + penalty` |
+| **eclair** | 0.6.2 – 0.14 | `ratios`, `constants`, `constants-log` | Yen's K-shortest, K=3 |
+
+Version boundaries are real behaviour changes, not cosmetic: LDK v0.1.0 turned its live
+liquidity penalty **off** by default and swapped its density function; eclair v0.13.1
+deleted the `ratios` mode outright; LND v0.19 changed which amount the timelock penalty is
+charged against; CLN's formula is unchanged across the whole range (askrene only took over
+`pay` in v26.06 and is **not** modelled). `client_profile("lnd")` with no version pins to
+the paper's baseline so published results stay reproducible — pass `version="latest"` to
+track the newest instead.
+
+The design follows Saraswathi & Kümmerle, [*An Exposition of Pathfinding Strategies Within
+Lightning Network Clients*](https://arxiv.org/abs/2410.13784), but **constants are taken
+from the upstream sources**, because several of the paper's are wrong — most consequentially
+LND's attempt cost, which it gives in msat where the source is in sat (a 1000× error that
+sets the entire fee-vs-reliability trade-off). Each module docstring lists the corrections
+it applies and cites the file and symbol checked.
+
+What is reproduced is each client's **decision rule on a static snapshot**. Payment
+history, learned liquidity bounds, retry loops and multi-part splitting are not — every
+success probability is a cold-start estimate, the same assumption the paper's own
+simulation makes. See `examples/compare_clients.py` for a one-shot CLI.
+
+### Filtering a snapshot to the nodes that matter
+
+A snapshot is mostly ballast. About half its nodes hold no channel; most of the rest can
+never appear *in the middle* of a route. `strong_core` removes them:
+
+```python
+from lnhistoryclient.analysis import node_profiles, strong_core
+
+core = strong_core(G, amount_sat=100_000)      # ~9% of nodes, ~58% of channels
+profiles = node_profiles(G, amount_sat=100_000)  # per-node features and class
+```
+
+A node is **active** when two structural tests pass: it has two *distinct* usable channels
+that both admit the amount — one to receive on and a different one to send on — and it sits
+in the strongly-connected routable core. Neither is a tuned threshold, and on a 2026
+snapshot the nodes passing both carried **100% of the forwarding** in 13 745 simulated
+payments while every other node carried none. Filtering is lossless: the same payments
+still route, at the same cost.
+
+The quantity behind the first test is `NodeProfile.max_forward_sat`, the largest single
+payment the node could forward. It is a min-cut on the node's own star, so it is set by the
+**second-largest** usable channel — not the total, and not the largest:
+
+```python
+p = profiles[node_id]
+p.max_forward_sat   # what it can actually pass
+p.capacity_sat      # what it advertises — a node with one 10 BTC channel and nine
+                    # 200k channels has 12 BTC of this and forwards 200k
+```
+
+The core is **amount-dependent**; recompute it per amount rather than reusing one across a
+sweep. `ActivityRule(min_live_channels=N)` tightens the set further, and every positive `N`
+is lossy.
 
 ## Model
 The library provides [python typing models](https://docs.python.org/3/library/typing.html) for every gossip message.
