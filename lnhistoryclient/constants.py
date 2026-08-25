@@ -14,7 +14,7 @@ MSG_TYPE_GOSSIP_STORE_UUID = 4107  # CLN >= v26.06 (gossip_store v16): store gen
 
 # LND Experimental TLV Types
 # Used in channel_update extensions for negative/inbound fees
-TLV_TYPE_LND_INBOUND_FEES = 55555  # 0x03F9
+TLV_TYPE_LND_INBOUND_FEES = 55555  # 0xd903; on the wire as BigSize fd d9 03
 
 # Type name map
 GOSSIP_TYPE_NAMES = {

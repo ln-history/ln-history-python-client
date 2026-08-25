@@ -25,6 +25,12 @@ class ChannelUpdate:
         fee_base_msat (int): Base fee charged for HTLCs (in millisatoshis).
         fee_proportional_millionths (int): Fee rate in millionths of an HTLC.
         htlc_maximum_msat (int | None): Optional max value for HTLCs.
+        inbound_fee_base_msat (int | None): lnd inbound base fee in msat, from TLV 55555.
+            **Signed**; negative is a discount for routing *into* this channel. ``None``
+            means the message carried no TLV record, which is a different fact from ``0``
+            (record present and explicitly zero) -- do not collapse them.
+        inbound_fee_proportional_millionths (int | None): lnd inbound proportional fee in
+            ppm, from the same record. Signed, same ``None``/``0`` distinction.
     """
 
     signature: bytes
@@ -38,6 +44,9 @@ class ChannelUpdate:
     fee_base_msat: int
     fee_proportional_millionths: int
     htlc_maximum_msat: Optional[int] = None
+    inbound_fee_base_msat: Optional[int] = None
+    inbound_fee_proportional_millionths: Optional[int] = None
+
 
     @property
     def scid_str(self) -> str:
@@ -86,4 +95,6 @@ class ChannelUpdate:
             "fee_base_msat": self.fee_base_msat,
             "fee_proportional_millionths": self.fee_proportional_millionths,
             "htlc_maximum_msat": self.htlc_maximum_msat,
+            "inbound_fee_base_msat": self.inbound_fee_base_msat,
+            "inbound_fee_proportional_millionths": self.inbound_fee_proportional_millionths,
         }
