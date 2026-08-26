@@ -240,7 +240,7 @@ def _typeless_channel_update(buf: bytes, pos: int, size: int) -> Optional[tuple]
     return _CHANNEL_UPDATE_TYPE_BYTES + payload, body + value
 
 
-def _unframed_message_length(buf: bytes, off: int) -> Optional[int]:
+def _unframed_message_length(buf: bytes, off: int, inbound_fees: bool = False) -> Optional[int]:
     """Length (including the 2-byte type) of a self-delimiting BOLT #7 message that
     begins at ``off`` with no varint length prefix. Returns ``None`` if the type is
     unknown or the buffer is truncated.
@@ -265,10 +265,24 @@ def _unframed_message_length(buf: bytes, off: int) -> Optional[int]:
         if msg_type == MSG_TYPE_CHANNEL_UPDATE:
             message_flags = buf[body + 64 + 32 + 8 + 4]  # after sig+chain+scid+timestamp
             base = 2 + 64 + 32 + 8 + 4 + 1 + 1 + 2 + 8 + 4 + 4
-            return base + (8 if message_flags & 0x01 else 0)  # optional htlc_maximum_msat
+            length = base + (8 if message_flags & 0x01 else 0)  # optional htlc_maximum_msat
+            if inbound_fees:
+                # Absorb lnd's inbound-fee TLV when it is demonstrably there. The record
+                # is fixed-width and its BigSize header is a 4-byte literal, so the guard
+                # is exact rather than a general TLV walk -- which matters, because
+                # over-reading here does not merely lose this message, it desynchronises
+                # the reader and costs its neighbours too.
+                tail = off + length
+                if buf[tail : tail + 4] == _INBOUND_FEE_TLV_HEADER and tail + 12 <= len(buf):
+                    length += 12
+            return length
     except (struct.error, IndexError):
         return None
     return None
+
+
+#: BigSize type 55555 (0xd903) with length 8 -- lnd's inbound-fee TLV header.
+_INBOUND_FEE_TLV_HEADER = b"\xfd\xd9\x03\x08"
 
 
 def _is_pubkey(b: bytes) -> bool:
@@ -292,7 +306,7 @@ def _is_plausible(parsed: ParsedMessage) -> bool:
     return False
 
 
-def _candidate_message(buf: bytes, pos: int, size: int) -> Optional[tuple]:
+def _candidate_message(buf: bytes, pos: int, size: int, inbound_fees: bool = False) -> Optional[tuple]:
     """Return ``(message_bytes_incl_type, next_pos)`` for the blob at ``pos``.
 
     The backend's framing is inconsistent — even the varint's meaning differs between
@@ -305,7 +319,7 @@ def _candidate_message(buf: bytes, pos: int, size: int) -> Optional[tuple]:
     """
     # Unframed: cursor is already on the type.
     if pos + 2 <= size and _u16(buf, pos) in _KNOWN_BOLT7_TYPES:
-        length = _unframed_message_length(buf, pos)
+        length = _unframed_message_length(buf, pos, inbound_fees)
         if length is not None and pos + length <= size:
             return buf[pos : pos + length], pos + length
     # Framed: skip the leading varint, then the type follows.
@@ -319,14 +333,14 @@ def _candidate_message(buf: bytes, pos: int, size: int) -> Optional[tuple]:
         and type_pos + 2 <= size
         and _u16(buf, type_pos) in _KNOWN_BOLT7_TYPES
     ):
-        length = _unframed_message_length(buf, type_pos)
+        length = _unframed_message_length(buf, type_pos, inbound_fees)
         if length is not None and type_pos + length <= size:
             return buf[type_pos : type_pos + length], type_pos + length
     # Type-less: a varint whose value is exactly a channel_update payload length.
     return _typeless_channel_update(buf, pos, size)
 
 
-def iter_snapshot_messages(path: str) -> Iterator[ParsedMessage]:
+def iter_snapshot_messages(path: str, inbound_fees: bool = False) -> Iterator[ParsedMessage]:
     """Yield parsed BOLT #7 messages from a downloaded snapshot stream.
 
     The stream concatenates ``raw_gossip`` blobs whose framing is currently
@@ -350,7 +364,7 @@ def iter_snapshot_messages(path: str) -> Iterator[ParsedMessage]:
     size = len(buf)
     resyncs = 0
     while pos < size:
-        candidate = _candidate_message(buf, pos, size)
+        candidate = _candidate_message(buf, pos, size, inbound_fees)
         parsed: Optional[ParsedMessage] = None
         if candidate is not None:
             message, next_pos = candidate

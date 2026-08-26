@@ -1,6 +1,6 @@
 import io
 import struct
-from typing import Union
+from typing import Optional, Tuple, Union
 
 from lnhistoryclient.model.ChannelAnnouncement import ChannelAnnouncement
 from lnhistoryclient.model.ChannelUpdate import ChannelUpdate
@@ -92,6 +92,37 @@ def parse_node_announcement(data: Union[bytes, io.BytesIO]) -> NodeAnnouncement:
     )
 
 
+#: BigSize type 55555 (0xd903) followed by length 8 — the exact byte prefix of lnd's
+#: inbound-fee TLV record. Guarding on the literal bytes rather than running a general
+#: TLV walk keeps the hot path cheap and makes a malformed tail yield ``None`` rather
+#: than a plausible-looking wrong number. The same guard is used by the ``lnhistory``
+#: database's generated columns, so the two decoders agree by construction.
+_INBOUND_FEE_TLV_PREFIX = b"\xfd\xd9\x03\x08"
+
+
+def parse_inbound_fees(tail: bytes) -> Tuple[Optional[int], Optional[int]]:
+    """Decode lnd's inbound-fee TLV (record type 55555) from a channel_update's tail.
+
+    Returns ``(base_msat, proportional_millionths)``, or ``(None, None)`` when the tail
+    does not carry the record.
+
+    Both values are **signed** int32 (two's complement on the wire). Negative means a
+    *discount* for routing into the channel, which is the common case; lnd gates setting
+    positive values behind ``--accept-positive-inbound-fees``, but positive values do
+    occur on the wire.
+
+    ``None`` and ``0`` are different facts and both are preserved: ``None`` means the
+    message carries no TLV at all, ``0`` means the record is present and explicitly zero
+    (lnd >= 0.18 with no inbound fee configured). The distinction doubles as an
+    implementation fingerprint, so callers should not collapse it.
+    """
+    if len(tail) < 12 or not tail.startswith(_INBOUND_FEE_TLV_PREFIX):
+        return None, None
+    base = int.from_bytes(tail[4:8], byteorder="big", signed=True)
+    rate = int.from_bytes(tail[8:12], byteorder="big", signed=True)
+    return base, rate
+
+
 def parse_channel_update(data: Union[bytes, io.BytesIO]) -> ChannelUpdate:
     """
     Parses a byte stream or BytesIO into a ChannelUpdate object.
@@ -124,6 +155,15 @@ def parse_channel_update(data: Union[bytes, io.BytesIO]) -> ChannelUpdate:
     if message_flags[0] & 1:
         htlc_maximum_msat = struct.unpack(">Q", b.read(8))[0]
 
+    # Anything after the standard fields is the TLV extension stream. Only read it when
+    # the caller handed us a bounded ``bytes`` for exactly one message: given a shared
+    # BytesIO we cannot know where this message ends, and consuming the tail would eat
+    # the next message. ``parse_channel_update_extended`` covers the stream case.
+    inbound_fee_base_msat: Optional[int] = None
+    inbound_fee_proportional_millionths: Optional[int] = None
+    if isinstance(data, bytes):
+        inbound_fee_base_msat, inbound_fee_proportional_millionths = parse_inbound_fees(data[b.tell() :])
+
     return ChannelUpdate(
         signature=signature,
         chain_hash=chain_hash,
@@ -136,4 +176,6 @@ def parse_channel_update(data: Union[bytes, io.BytesIO]) -> ChannelUpdate:
         fee_base_msat=fee_base_msat,
         fee_proportional_millionths=fee_proportional_millionths,
         htlc_maximum_msat=htlc_maximum_msat,
+        inbound_fee_base_msat=inbound_fee_base_msat,
+        inbound_fee_proportional_millionths=inbound_fee_proportional_millionths,
     )
