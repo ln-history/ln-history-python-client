@@ -16,6 +16,7 @@ from lnhistoryclient.analysis.implementations import (
     implementation_from_inbound_fee_tlv,
     matching_heuristics,
     unknown_bits,
+    version_floor,
 )
 
 #: impscan's README works this example through by hand and reports CLN.
@@ -151,3 +152,40 @@ def test_inbound_fee_tlv_is_one_directional() -> None:
     assert implementation_from_inbound_fee_tlv(True) == "LND"
     assert implementation_from_inbound_fee_tlv(False) is None
     assert implementation_from_inbound_fee_tlv(None) is None
+
+
+# -- version floors ------------------------------------------------------------------
+
+ORIGINS = {
+    "LND": {
+        24: ("v0.18.0-beta", "2024-05-30"),  # route blinding, a LOW bit from a LATE release
+        25: ("v0.18.0-beta", "2024-05-30"),
+        54: ("v0.15.0-beta", "2022-06-28"),  # keysend, a HIGH bit from an EARLY release
+        55: ("v0.15.0-beta", "2022-06-28"),
+    },
+    "LDK": {30: ("v0.0.116", "2023-03-22")},
+}
+
+
+def test_floor_ranks_by_release_date_not_bit_number() -> None:
+    """The case that makes the distinction real rather than pedantic.
+
+    A node advertising both keysend (bit 54, v0.15.0) and route blinding (bit 24, v0.18.0)
+    is at least v0.18.0. Ranking by bit number would answer v0.15.0 and be wrong.
+    """
+    both = (1 << 55) | (1 << 25)
+    version, released, bit = version_floor(both, "LND", ORIGINS)
+    assert version == "v0.18.0-beta"
+    assert bit == 25
+
+
+def test_floor_is_none_when_nothing_is_known() -> None:
+    assert version_floor(0, "LND", ORIGINS) is None
+    assert version_floor(1 << 55, "Eclair", ORIGINS) is None
+
+
+def test_floor_is_read_against_one_implementations_numbering() -> None:
+    """Bit 30 is option_amp to lnd and taproot to LDK, so the same bitfield must not
+    resolve against the wrong implementation's table."""
+    assert version_floor(1 << 30, "LDK", ORIGINS)[0] == "v0.0.116"
+    assert version_floor(1 << 30, "LND", ORIGINS) is None

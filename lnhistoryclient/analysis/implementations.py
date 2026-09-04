@@ -345,3 +345,49 @@ def implementation_from_inbound_fee_tlv(emits_record: Optional[bool]) -> Optiona
     not. Returning None for the negative case keeps callers from reading it as evidence.
     """
     return INBOUND_FEE_TLV_IMPLIES if emits_record else None
+
+
+#: (version label, release date) for one feature bit of one implementation.
+BitOrigin = Tuple[str, str]
+
+
+def version_floor(
+    features: object,
+    implementation: str,
+    origins: Dict[str, Dict[int, BitOrigin]],
+) -> Optional[Tuple[str, str, int]]:
+    """The earliest release of ``implementation`` that could advertise these bits.
+
+    A LOWER BOUND, never an equality. A bit enters an implementation's source at some
+    release and never earlier, so advertising it proves the node is at least that new --
+    but a node can run something far newer and advertise nothing that says so, because
+    what gets advertised depends on build flags and configuration.
+
+    Args:
+        features: the advertised bitfield, as bytes, hex or int.
+        implementation: which implementation's bit numbering to read it against. Required,
+            and not a formality: bits do NOT mean the same thing to everyone. Bit 30 is
+            option_amp to lnd and taproot to LDK; bit 50 is zeroconf everywhere except
+            Eclair, where it is trampoline_payment.
+        origins: ``{implementation: {bit: (version, release_date)}}``, from
+            ``feature_bit_origins``.
+
+    Returns:
+        ``(version, release_date, deciding_bit)``, or None if no advertised bit has a
+        known origin.
+
+    The floor is the LATEST-RELEASED advertised bit, not the highest-numbered one. A later
+    release can add a lower bit -- lnd took route blinding (24) in v0.18.0-beta having
+    taken keysend (54) in v0.15.0-beta -- so ranking by bit number understates the floor.
+    """
+    known = origins.get(implementation)
+    if not known:
+        return None
+    value = features_to_int(features)
+    best: Optional[Tuple[str, str, int]] = None
+    for bit, (version, released) in known.items():
+        if not _bit(value, bit):
+            continue
+        if best is None or (released, bit) > (best[1], best[2]):
+            best = (version, released, bit)
+    return best
